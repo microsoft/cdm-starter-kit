@@ -1,0 +1,122 @@
+name: Docs Drift Check
+
+on:
+  pull_request:
+    paths:
+      - 'bicep/**'
+      - 'deploy/**'
+      - 'ui/**'
+      - 'docs/**'
+      - 'README.md'
+      - '.github/workflows/docs-drift-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-drift:
+    name: docs-drift-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check docs updated when infrastructure changes
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          # Skip if not in PR context (e.g., workflow_dispatch)
+          if [ -z "$BASE_REF" ]; then
+            echo "No base ref available (not a PR context). Skipping docs drift check."
+            exit 0
+          fi
+
+          # Get list of changed files in this PR
+          CHANGED=$(git diff --name-only "origin/${BASE_REF}...HEAD" 2>/dev/null || echo "")
+
+          if [ -z "$CHANGED" ]; then
+            echo "No changed files detected. Skipping docs drift check."
+            exit 0
+          fi
+
+          warnings=0
+
+          # Check if Bicep files changed
+          BICEP_CHANGED=$(echo "$CHANGED" | grep -E '^bicep/' || true)
+          if [ -n "$BICEP_CHANGED" ]; then
+            echo "Infrastructure (bicep/) files changed:"
+            echo "$BICEP_CHANGED"
+            echo ""
+
+            # Check if architecture docs updated
+            ARCH_UPDATED=$(echo "$CHANGED" | grep -E '^docs/architecture\.md$' || true)
+            if [ -z "$ARCH_UPDATED" ]; then
+              echo "::warning::Bicep templates changed but docs/architecture.md was not updated."
+              echo "If the architecture changed, please update docs/architecture.md."
+              warnings=1
+            fi
+          fi
+
+          # Check if deploy/ changed
+          DEPLOY_CHANGED=$(echo "$CHANGED" | grep -E '^deploy/' || true)
+          if [ -n "$DEPLOY_CHANGED" ]; then
+            README_UPDATED=$(echo "$CHANGED" | grep -E '^README\.md$' || true)
+            if [ -z "$README_UPDATED" ]; then
+              echo "::warning::Deployment scripts changed but README.md was not updated."
+              echo "If deployment steps changed, please update the Getting Started section in README.md."
+              warnings=1
+            fi
+          fi
+
+          # Check if UI definitions changed
+          UI_CHANGED=$(echo "$CHANGED" | grep -E '^ui/' || true)
+          if [ -n "$UI_CHANGED" ]; then
+            FAQ_UPDATED=$(echo "$CHANGED" | grep -E '^docs/faq\.md$' || true)
+            if [ -z "$FAQ_UPDATED" ]; then
+              echo "::warning::UI definitions changed but docs/faq.md was not updated."
+              echo "If new capabilities were added, please update docs/faq.md."
+              warnings=1
+            fi
+          fi
+
+          if [ "$warnings" -eq 0 ]; then
+            echo "Documentation is in sync with infrastructure changes. ✅"
+          else
+            echo ""
+            echo "Documentation drift warnings detected. Please review and update docs if applicable."
+            # Warnings only, not blocking the PR
+          fi
+
+      - name: Verify essential companion files exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Verify that essential companion files expected alongside README exist
+          refs=(
+            "CONTRIBUTING.md"
+            "docs/architecture.md"
+            "docs/faq.md"
+            "SECURITY.md"
+            "CODE_OF_CONDUCT.md"
+            "LICENSE"
+          )
+
+          missing=0
+          for ref in "${refs[@]}"; do
+            if [ ! -f "$ref" ]; then
+              echo "::warning::README.md references '$ref' but the file does not exist."
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -eq 0 ]; then
+            echo "All doc cross-references are valid. ✅"
+          fi

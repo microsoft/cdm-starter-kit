@@ -1,0 +1,96 @@
+name: PR Validate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-repo:
+    name: validate-repo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required repository files
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_files=(
+            "README.md"
+            "LICENSE"
+            "SECURITY.md"
+            "CODE_OF_CONDUCT.md"
+            "CONTRIBUTING.md"
+            "SUPPORT.md"
+            "CODEOWNERS"
+            "bicepconfig.json"
+            ".github/PULL_REQUEST_TEMPLATE.md"
+            ".github/dependabot.yml"
+            ".github/ISSUE_TEMPLATE/bug_report.md"
+            ".github/ISSUE_TEMPLATE/security_report.md"
+            "docs/architecture.md"
+            "docs/faq.md"
+          )
+
+          missing=0
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "Missing required file: $file"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
+            echo "Repository validation failed due to missing required files."
+            exit 1
+          fi
+
+      - name: Verify required directories exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_dirs=(
+            ".github/ISSUE_TEMPLATE"
+            "docs"
+          )
+
+          for dir in "${required_dirs[@]}"; do
+            if [ ! -d "$dir" ]; then
+              echo "Missing required directory: $dir"
+              exit 1
+            fi
+          done
+
+      - name: Basic secret and tenant safety guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -RInE --exclude-dir=.git --exclude=LICENSE \
+            '-----BEGIN PRIVATE KEY-----|clientSecret\s*[:=]|connectionString\s*[:=]|servicePrincipalKey\s*[:=]' .; then
+            echo "Potential secret material detected in repository."
+            exit 1
+          fi
+
+          if grep -RInE --exclude-dir=.git --exclude=README.md --exclude=docs/faq.md \
+            'tenantId\s*[:=]\s*[0-9a-fA-F-]{8,}|subscriptionId\s*[:=]\s*[0-9a-fA-F-]{8,}' .; then
+            echo "Potential tenant/subscription ID detected in repository files."
+            exit 1
+          fi
+
+      - name: Validate Markdown links (basic)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE --include='*.md' '\]\(\./\.\./' .; then
+            echo "Found suspicious relative links that may break in GitHub rendering."
+            exit 1
+          fi
+
+      - name: Validation complete
+        run: echo "PR validation checks passed."

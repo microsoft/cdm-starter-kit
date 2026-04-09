@@ -1,0 +1,64 @@
+name: Bicep Lint
+
+on:
+  pull_request:
+    paths:
+      - '**/*.bicep'
+      - 'bicepconfig.json'
+      - '.github/workflows/bicep-lint.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.bicep'
+      - 'bicepconfig.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-bicep:
+    name: lint-bicep
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/azure-cli:2.62.0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect Bicep files
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t FILES < <(find . -type f -name '*.bicep' -not -path './.git/*' | sed 's|^\./||')
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "No .bicep files found. Skipping lint/build."
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            printf '%s\n' "${FILES[@]}" > bicep_files.txt
+            echo "Found Bicep files:"
+            cat bicep_files.txt
+          fi
+
+      - name: Install Bicep CLI
+        if: steps.detect.outputs.found == 'true'
+        shell: bash
+        run: az bicep install
+
+      - name: Build all Bicep files
+        if: steps.detect.outputs.found == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r file; do
+            echo "Validating $file"
+            az bicep build --file "$file" > /dev/null
+          done < bicep_files.txt
+
+      - name: No-op when no Bicep files
+        if: steps.detect.outputs.found != 'true'
+        run: echo "Bicep lint check passed (no .bicep files present)."
