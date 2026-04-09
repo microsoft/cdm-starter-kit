@@ -1,0 +1,38 @@
+# CDM Starter Kit - Code Ownership
+#
+# This file defines code ownership for the CDM Starter Kit repository.
+# For more information on CODEOWNERS, see GitHub documentation:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repository
+*                                   @microsoft/cdm-vteam
+
+# Documentation
+README.md                            @microsoft/cdm-vteam
+CONTRIBUTING.md                      @microsoft/cdm-vteam
+docs/                                @microsoft/cdm-vteam
+*.md                                 @microsoft/cdm-vteam
+
+# Security and governance
+SECURITY.md                          @microsoft/cdm-vteam
+CODE_OF_CONDUCT.md                   @microsoft/cdm-vteam
+LICENSE                              @microsoft/cdm-vteam
+
+# Configuration and automation
+.github/                             @microsoft/cdm-vteam
+bicepconfig.json                     @microsoft/cdm-vteam
+
+# Bicep infrastructure templates
+bicep/                               @microsoft/cdm-vteam
+
+# CreateUIDefinition forms
+ui/                                  @microsoft/cdm-vteam
+
+# Test files
+*test*.json                          @microsoft/cdm-vteam
+*test*.bicep                         @microsoft/cdm-vteam
+
+# Build and deployment scripts
+deploy/                              @microsoft/cdm-vteam
+*.ps1                                @microsoft/cdm-vteam
+*.sh                                 @microsoft/cdm-vteam

@@ -1,0 +1,118 @@
+{
+  "analyzers": {
+    "core": {
+      "enabled": true,
+      "rules": {
+        "adminusername-should-not-be-literal": {
+          "level": "error"
+        },
+        "artifacts-should-be-referenced-by-latest-tag": {
+          "level": "warning"
+        },
+        "avoid-empty-output-properties": {
+          "level": "warning"
+        },
+        "avoid-hardcoded-location": {
+          "level": "warning"
+        },
+        "avoid-hardcoded-resource-locations": {
+          "level": "warning"
+        },
+        "avoid-unnecessary-dependson": {
+          "level": "warning"
+        },
+        "avoid-user-defined-resources-with-hardcoded-api-versions": {
+          "level": "warning"
+        },
+        "avoid-user-defined-types-with-hardcoded-api-versions": {
+          "level": "warning"
+        },
+        "avoid-variable-properties-that-shadow-resource-properties": {
+          "level": "warning"
+        },
+        "max-outputs": {
+          "level": "warning"
+        },
+        "max-parameters": {
+          "level": "warning"
+        },
+        "max-resources": {
+          "level": "warning"
+        },
+        "max-variables": {
+          "level": "warning"
+        },
+        "metadata-should-have-description": {
+          "level": "warning"
+        },
+        "missing-lock-level-metadata": {
+          "level": "warning"
+        },
+        "nested-deployment-template-should-not-be-user-defined-type-at-scope": {
+          "level": "warning"
+        },
+        "outputs-should-not-contain-secrets": {
+          "level": "error"
+        },
+        "password-properties-should-be-secure": {
+          "level": "error"
+        },
+        "redundant-dependson": {
+          "level": "warning"
+        },
+        "resource-type-should-not-be-literal": {
+          "level": "warning"
+        },
+        "resources-should-have-location-for-update": {
+          "level": "warning"
+        },
+        "resources-should-not-be-nested": {
+          "level": "warning"
+        },
+        "secure-parameter-default": {
+          "level": "warning"
+        },
+        "secure-parameters-in-nested-deployments": {
+          "level": "warning"
+        },
+        "secure-secrets-in-params": {
+          "level": "error"
+        },
+        "simplify-interpolation": {
+          "level": "warning"
+        },
+        "use-cases-for-conditions": {
+          "level": "warning"
+        },
+        "use-parent-resource-properties": {
+          "level": "warning"
+        },
+        "use-recent-api-versions": {
+          "level": "warning"
+        },
+        "use-resource-id-functions": {
+          "level": "warning"
+        },
+        "use-resource-symbolic-references": {
+          "level": "warning"
+        },
+        "use-stable-resource-identifiers": {
+          "level": "warning"
+        },
+        "use-stable-vm-image": {
+          "level": "warning"
+        }
+      }
+    }
+  },
+  "experimentalFeaturesEnabled": {
+    "assertions": true,
+    "sourceGeneratedTypes": false,
+    "testFramework": true
+  },
+  "moduleAliases": {
+    "ts": {
+      "source": "br/public:bicep/types/public-types:1.0.0"
+    }
+  }
+}

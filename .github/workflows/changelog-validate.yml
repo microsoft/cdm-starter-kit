@@ -1,0 +1,115 @@
+name: Changelog Validate
+
+on:
+  pull_request:
+    paths:
+      - 'bicep/**'
+      - 'deploy/**'
+      - 'ui/**'
+      - 'CHANGELOG.md'
+      - '.github/workflows/changelog-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-changelog:
+    name: validate-changelog
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check CHANGELOG.md exists
+        shell: bash
+        run: |
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "::error::CHANGELOG.md is missing from the repository root."
+            exit 1
+          fi
+
+      - name: Validate Keep-a-Changelog format
+        shell: bash
+        run: |
+          set -euo pipefail
+          errors=0
+
+          # Check for required top-level heading
+          if ! grep -qE '^# ' CHANGELOG.md; then
+            echo "::error::CHANGELOG.md must start with a top-level heading (# Changelog)."
+            errors=1
+          fi
+
+          # Check for Unreleased section
+          if ! grep -qiE '^\#\# \[?Unreleased\]?' CHANGELOG.md; then
+            echo "::error::CHANGELOG.md must contain an '## [Unreleased]' section."
+            errors=1
+          fi
+
+          # Check for at least one versioned release section (vX.Y.Z or [X.Y.Z])
+          if ! grep -qE '^\#\# \[?[0-9]+\.[0-9]+\.[0-9]+\]?' CHANGELOG.md; then
+            echo "::warning::CHANGELOG.md has no versioned release entries yet. Add entries as releases are made."
+          fi
+
+          # Check for valid change type subsections
+          valid_types="Added|Changed|Deprecated|Removed|Fixed|Security"
+          if grep -qE '^\#\#\# ' CHANGELOG.md; then
+            invalid=$(grep -E '^\#\#\# ' CHANGELOG.md | grep -vE "^\#\#\# ($valid_types)" || true)
+            if [ -n "$invalid" ]; then
+              echo "::warning::Non-standard change type sections found in CHANGELOG.md:"
+              echo "$invalid"
+              echo "Expected types: Added, Changed, Deprecated, Removed, Fixed, Security"
+            fi
+          fi
+
+          if [ "$errors" -ne 0 ]; then
+            echo "::error::CHANGELOG.md format validation failed."
+            exit 1
+          fi
+
+          echo "CHANGELOG.md format validation passed."
+
+      - name: Check CHANGELOG updated when infrastructure changes
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          # Skip if not in PR context (e.g., workflow_dispatch)
+          if [ -z "$BASE_REF" ]; then
+            echo "No base ref available (not a PR context). Skipping drift check."
+            exit 0
+          fi
+
+          # Get list of changed files in this PR
+          CHANGED=$(git diff --name-only "origin/${BASE_REF}...HEAD" 2>/dev/null || echo "")
+
+          if [ -z "$CHANGED" ]; then
+            echo "No changed files detected. Skipping drift check."
+            exit 0
+          fi
+
+          # Check if infrastructure files changed
+          INFRA_CHANGED=$(echo "$CHANGED" | grep -E '^(bicep/|deploy/|ui/)' || true)
+
+          if [ -n "$INFRA_CHANGED" ]; then
+            # Check if CHANGELOG was also updated
+            CHANGELOG_CHANGED=$(echo "$CHANGED" | grep -E '^CHANGELOG\.md$' || true)
+            if [ -z "$CHANGELOG_CHANGED" ]; then
+              echo "::warning::Infrastructure files changed but CHANGELOG.md was not updated."
+              echo "Changed infrastructure files:"
+              echo "$INFRA_CHANGED"
+              echo ""
+              echo "Please update CHANGELOG.md with a description of these changes."
+              # Warning only, not blocking
+            else
+              echo "CHANGELOG.md updated alongside infrastructure changes. ✅"
+            fi
+          else
+            echo "No infrastructure changes detected. Skipping CHANGELOG drift check."
+          fi

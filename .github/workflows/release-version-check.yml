@@ -1,0 +1,130 @@
+name: Release Version Check
+
+on:
+  release:
+    types: [published, created]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-version:
+    name: validate-release-version
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag follows semantic versioning
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Get the tag name via environment variables (avoid script injection)
+          if [ "$EVENT_NAME" = "release" ]; then
+            TAG="$TAG_NAME"
+          elif [ "$REF_TYPE" = "tag" ]; then
+            TAG="$REF_NAME"
+          else
+            echo "No tag context found. Running manual validation of existing tags."
+            TAG=""
+          fi
+
+          SEMVER_REGEX='^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'
+
+          if [ -n "$TAG" ]; then
+            echo "Validating tag: $TAG"
+            if [[ ! "$TAG" =~ $SEMVER_REGEX ]]; then
+              echo "::error::Tag '$TAG' does not follow semantic versioning format."
+              echo "Expected format: vX.Y.Z (e.g., v1.0.0, v2.1.3-beta.1)"
+              exit 1
+            fi
+            echo "Tag '$TAG' follows semantic versioning. ✅"
+          fi
+
+      - name: Validate CHANGELOG has entry for release version
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "release" ]; then
+            TAG="$TAG_NAME"
+          elif [ "$REF_TYPE" = "tag" ]; then
+            TAG="$REF_NAME"
+          else
+            echo "No tag context. Skipping CHANGELOG version check."
+            exit 0
+          fi
+
+          # Strip 'v' prefix for CHANGELOG lookup
+          VERSION="${TAG#v}"
+
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "::error::CHANGELOG.md not found. Every release must have a corresponding CHANGELOG entry."
+            exit 1
+          fi
+
+          if grep -qE "^\#\# \[?${VERSION}\]?" CHANGELOG.md; then
+            echo "CHANGELOG.md contains entry for version $VERSION. ✅"
+          else
+            echo "::error::CHANGELOG.md does not contain an entry for version $VERSION."
+            echo "Please add a '## [$VERSION]' section to CHANGELOG.md before releasing."
+            exit 1
+          fi
+
+      - name: Check for breaking changes documentation
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" != "release" ]; then
+            echo "Not a release event. Skipping breaking changes check."
+            exit 0
+          fi
+
+          TAG="$TAG_NAME"
+          VERSION="${TAG#v}"
+
+          # Extract the major version — if major bumped, breaking changes should be documented
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+
+          # Get previous tags and check if major version increased
+          PREV_TAG=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.' | head -2 | tail -1 || echo "")
+
+          if [ -n "$PREV_TAG" ]; then
+            PREV_MAJOR=$(echo "${PREV_TAG#v}" | cut -d. -f1)
+
+            if [ "$MAJOR" -gt "$PREV_MAJOR" ]; then
+              echo "Major version bump detected ($PREV_TAG → $TAG)."
+
+              # Check for breaking changes section in CHANGELOG
+              if grep -qiE '(breaking|removed|deprecated)' CHANGELOG.md; then
+                echo "Breaking changes appear to be documented. ✅"
+              else
+                echo "::warning::Major version bump but no 'Breaking', 'Removed', or 'Deprecated' section found in CHANGELOG.md."
+                echo "Please document breaking changes for major version releases."
+              fi
+            fi
+          fi
+
+          echo "Release version validation complete."

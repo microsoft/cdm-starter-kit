@@ -1,0 +1,30 @@
+# Repository settings as code
+# Requires GitHub Settings app / Probot Settings to apply automatically.
+# If not installed, use this as documentation for manual setup.
+
+repository:
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  delete_branch_on_merge: true
+
+branches:
+  - name: main
+    protection:
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true
+        require_code_owner_reviews: true
+      required_status_checks:
+        strict: true
+        contexts:
+          - "Bicep Lint / lint-bicep"
+          - "Secret Scan / secret-scan"
+          - "PR Validate / validate-repo"
+          - "Changelog Validate / validate-changelog"
+          - "Docs Drift Check / docs-drift-check"
+      enforce_admins: true
+      restrictions: null
+      required_conversation_resolution: true
+      allow_force_pushes: false
+      allow_deletions: false
