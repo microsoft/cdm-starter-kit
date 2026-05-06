@@ -1,0 +1,529 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+    "handler": "Microsoft.Azure.CreateUIDef",
+    "version": "0.1.2-preview",
+    "parameters": {
+        "config": {
+            "basics": {
+                "description": "The CDM Starter Kit is a self-service provisioning tool that deploys all the Azure infrastructure you need to consume CDM data in a single, repeatable operation. It provisions resources such as a Synapse workspace, storage accounts, managed identity and an optional Azure Data Explorer (Kusto) cluster into your Azure subscription.\n\nThe Basics tab captures the foundational configuration for your Starter Kit deployment — where resources are provisioned, how they're named, who gets access, and how CDM data is sourced.",
+                "location": {
+                    "label": "Location",
+                    "resourceTypes": [
+                        "Microsoft.DataFactory/factories",
+                        "Microsoft.KeyVault/vaults",
+                        "Microsoft.Kusto/clusters",
+                        "Microsoft.ManagedIdentity/userAssignedIdentities",
+                        "Microsoft.Network/privateDnsZones",
+                        "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+                        "Microsoft.Network/privateEndpoints",
+                        "Microsoft.Resources/deploymentScripts",
+                        "Microsoft.Storage/storageAccounts"
+                    ]
+                }
+            }
+        },
+        "resourceTypes": [
+            "Microsoft.DataFactory/factories",
+            "Microsoft.KeyVault/vaults",
+            "Microsoft.Kusto/clusters",
+            "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "Microsoft.Network/privateDnsZones",
+            "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+            "Microsoft.Network/privateEndpoints",
+            "Microsoft.Resources/deploymentScripts",
+            "Microsoft.Storage/storageAccounts"
+        ],
+        "basics": [
+            {
+                "name": "instanceConfigSection",
+                "type": "Microsoft.Common.Section",
+                "label": "Instance Configuration",
+                "elements": [
+                    {
+                        "name": "instanceConfigInfoText",
+                        "type": "Microsoft.Common.TextBlock",
+                        "options": {
+                            "text": "Define a unique instance name that prefixes all deployed resources, and specify the Entra security group that receives access."
+                        }
+                    },
+                    {
+                        "name": "instanceName",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Instance Name",
+                        "toolTip": "Instance name is used to name the resource group and other related resources. For example, a resource group will be created with the format {instance-name}-rg-{region-short-name}. If the instance name is cdmstarterkit and the region is East US, the resource group will be named cdmstarterkit-rg-eus.",
+                        "placeholder": "e.g. cdmstarterkit",
+                        "constraints": {
+                            "required": true,
+                            "regex": "^[a-zA-Z][a-zA-Z0-9]{4,13}$",
+                            "validationMessage": "Name must be between 5 and 14 characters, start with a letter, and contain only letters and numbers. No special characters allowed."
+                        },
+                        "visible": true
+                    },
+                    {
+                        "name": "viewerGroupObjectId",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Entra Group Object ID",
+                        "toolTip": "Enter the Object ID of the Entra (Azure AD) Group that should have Reader access to the resource group.",
+                        "placeholder": "e.g. 0xx4xx0x-x5xx-4xxa-xx5x-xexx4xx0xx4x",
+                        "constraints": {
+                            "required": true,
+                            "regex": "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$",
+                            "validationMessage": "Must be a valid GUID."
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "dataSourceConfigSection",
+                "type": "Microsoft.Common.Section",
+                "label": "Data Source Configuration",
+                "elements": [
+                    {
+                        "name": "dataSourceInfoText",
+                        "type": "Microsoft.Common.TextBlock",
+                        "options": {
+                            "text": "Control whether the Starter Kit reads directly from an existing central CDM datalake, or receives data via a push mechanism. When reading from an existing datalake, provide the `Data Subscription Catalog Path`. When using data push mechanism, provide the multi-tenant app identity that is authorized to write data into your storage."
+                        }
+                    },
+                    {
+                        "name": "attachToCentralDatalake",
+                        "type": "Microsoft.Common.CheckBox",
+                        "label": "Use Existing Datalake",
+                        "toolTip": "Enable this option if your tenant already has a Datalake containing CDM data. This allows the instance to read directly from it, avoiding duplicate copies of CDM data in the same tenant. When unchecked, the Starter Kit expects data to be pushed into the consumer's storage by a multi-tenant application.",
+                        "defaultValue": true
+                    },
+                    {
+                        "name": "centralManifestPath",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Data Subscription Catalog Path",
+                        "toolTip": "The fully qualified path to the `subscription-catalog.json` file in the source storage account. This catalog file defines which CDM data assets are available and the storage locations where the data resides.",
+                        "placeholder": "abfss://config@<your-storage-account>.dfs.core.windows.net/manifest/v1.0/subscription-catalog.json",
+                        "visible": "[basics('dataSourceConfigSection').attachToCentralDatalake]",
+                        "constraints": {
+                            "required": "[basics('dataSourceConfigSection').attachToCentralDatalake]"
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "dataPushAuthSection",
+                "type": "Microsoft.Common.Section",
+                "label": "Data Push Authorization",
+                "visible": "[not(basics('dataSourceConfigSection').attachToCentralDatalake)]",
+                "elements": [
+                    {
+                        "name": "dataPushInfoText",
+                        "type": "Microsoft.Common.TextBlock",
+                        "options": {
+                            "text": "When the consumer's tenant does not have an existing CDM datalake (e.g., sovereign clouds or non-Microsoft operated tenants), CDM pushes data to the consumer's storage account. Provide the multi-tenant application identity authorized to perform this data push."
+                        }
+                    },
+                    {
+                        "name": "multiTenantAppPrincipalId",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Multi-Tenant App Object (Principal) ID",
+                        "toolTip": "The Object (Principal) ID of the Microsoft multi-tenant application (SPN) that is authorized to push CDM data into this Starter Kit instance's storage account. This identity is granted write access to the deployed storage account so that CDM's central pipeline can copy data into the consumer's environment. Contact the CDM Platform team to obtain the correct Object (Principal) ID for your tenant.",
+                        "placeholder": "e.g. axx2xx2x-x5xx-4xxf-xx0x-xfxx1xx7xx6x",
+                        "constraints": {
+                            "required": true,
+                            "regex": "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$",
+                            "validationMessage": "Must be a valid GUID."
+                        }
+                    },
+                    {
+                        "name": "firstPartyAppHelpText",
+                        "type": "Microsoft.Common.TextBlock",
+                        "options": {
+                            "text": "ℹ️ The Multi-Tenant App is a Microsoft-owned service principal that the CDM platform uses to push data into your storage account. It is required when your tenant does not have direct read access to the central CDM datalake — for example, in sovereign clouds or non-Microsoft operated tenants."
+                        }
+                    }
+                ]
+            }
+        ],
+        "steps": [
+            {
+                "name": "dataProductsOptions",
+                "label": "Data Products Selection",
+                "elements": [
+                    {
+                        "name": "dataProductsIntroText",
+                        "type": "Microsoft.Common.TextBlock",
+                        "options": {
+                            "text": "CDM Data Products are curated, analytics-ready datasets published by the Commerce Data Model platform, each representing a core commerce domain. They provide a canonical, governed view of commerce data — sourced from authoritative systems — and are designed to support reporting, reconciliation, and business intelligence consumption."
+                        }
+                    },
+                    {
+                        "name": "dataProductsSection",
+                        "type": "Microsoft.Common.Section",
+                        "label": "Data Products",
+                        "elements": [
+                            {
+                                "name": "dataProductsArray",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Data Products",
+                                "toolTip": "Select one or more CDM data products to deploy. Each selected product will configure the necessary ingestion pipelines, storage paths, and (optionally) Kusto tables in your Starter Kit instance.",
+                                "multiselect": true,
+                                "selectAll": true,
+                                "filter": true,
+                                "filterPlaceholder": "Filter Data Products ...",
+                                "defaultValue": [
+                                    "Charges",
+                                    "Prices",
+                                    "Benefits",
+                                    "Products",
+                                    "Cloud Dimensions"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "Charges",
+                                            "value": "Charges"
+                                        },
+                                        {
+                                            "label": "Prices",
+                                            "value": "Prices"
+                                        },
+                                        {
+                                            "label": "Benefits",
+                                            "value": "Benefits"
+                                        },
+                                        {
+                                            "label": "Products",
+                                            "value": "Products"
+                                        },
+                                        {
+                                            "label": "Cloud Dimensions",
+                                            "value": "CloudDimensions"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "name": "datasetSelectionSection",
+                        "type": "Microsoft.Common.Section",
+                        "label": "Dataset Selection",
+                        "elements": [
+                            {
+                                "name": "datasets_Charges",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Charges Datasets",
+                                "toolTip": "Charges represents the financial events generated when customers consume Azure services or make purchases. It covers usage charges, purchase charges, and adjustments. Charges data enables downstream consumers to reconcile billing, attribute costs, and track promotional benefit application.",
+                                "multiselect": true,
+                                "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Charges')]",
+                                "defaultValue": [
+                                    "CDM_Charges_Daily"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "CDM_Charges_Daily",
+                                            "value": "CDM_Charges_Daily"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            },
+                            {
+                                "name": "datasets_Prices",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Prices Datasets",
+                                "toolTip": "Prices provides product-level price points across retail, negotiated, and promotional pricing tiers. It includes the pricing attributes needed to produce customer-facing price sheets enabling consumers to render accurate pricing experiences and support reconciliation.",
+                                "multiselect": true,
+                                "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Prices')]",
+                                "defaultValue": [
+                                    "CDM_Prices"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "CDM_Prices",
+                                            "value": "CDM_Prices"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            },
+                            {
+                                "name": "datasets_Benefits",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Benefits Datasets",
+                                "toolTip": "The Benefits amortization domain provides amortized cost records for benefits across all Microsoft cloud offerings. It delivers a single, flat dataset that captures both used and unused commitment portions per day, enabling accurate cost attribution, utilization tracking, and financial reporting.",
+                                "multiselect": true,
+                                "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Benefits')]",
+                                "defaultValue": [
+                                    "CDM_Benefits_Amortization"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "CDM_Benefits_Amortization",
+                                            "value": "CDM_Benefits_Amortization"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            },
+                            {
+                                "name": "datasets_Products",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Products Datasets",
+                                "toolTip": "Products is a canonical view of all available products and services in the Microsoft commercial catalog. It includes product metadata like ProductCode, Sku level details. Products serves as the foundational reference dataset that Prices, Charges, and other domains join against",
+                                "multiselect": true,
+                                "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Products')]",
+                                "defaultValue": [
+                                    "CDM_Products"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "CDM_Products",
+                                            "value": "CDM_Products"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            },
+                            {
+                                "name": "datasets_CloudDimensions",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Cloud Dimensions Datasets",
+                                "toolTip": "Cloud Dimensions provides shared, authoritative reference data that other CDM domains rely on to consistently interpret pricing, eligibility, and billing across clouds and currencies.",
+                                "multiselect": true,
+                                "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'CloudDimensions')]",
+                                "defaultValue": [
+                                    "CDM_ExchangeRates"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "CDM_ExchangeRates",
+                                            "value": "CDM_ExchangeRates"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "computeConfigurations",
+                "label": "Compute Configurations",
+                "elements": [
+                    {
+                        "name": "computeIntroText",
+                        "type": "Microsoft.Common.TextBlock",
+                        "options": {
+                            "text": "The Compute Configurations tab controls the analytics compute layer for your Starter Kit deployment. By default, the Starter Kit deploys an Azure Data Explorer (Kusto) cluster that enables interactive KQL-based exploration of CDM data."
+                        }
+                    },
+                    {
+                        "name": "enableKustoCluster",
+                        "type": "Microsoft.Common.CheckBox",
+                        "label": "Enable Kusto Cluster Creation",
+                        "toolTip": "Enable this option to deploy a Kusto (Azure Data Explorer) cluster as part of the Starter Kit deployment. Uncheck if you only need Synapse-based access and do not require interactive KQL querying.",
+                        "defaultValue": true
+                    },
+                    {
+                        "name": "kustoConfigurations",
+                        "type": "Microsoft.Common.Section",
+                        "label": "Kusto Configurations",
+                        "visible": "[steps('computeConfigurations').enableKustoCluster]",
+                        "elements": [
+                            {
+                                "name": "kustoClusterSize",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Kusto Cluster Size",
+                                "toolTip": "Select the size of the Kusto cluster to be deployed by the Starter Kit. The size determines the minimum and maximum number of cluster instances, which defines the compute capacity and scalability of your data analytics environment.",
+                                "defaultValue": "Medium (Min instances: 40, Max instances: 200)",
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "Small (Min instances: 20, Max instances: 100)",
+                                            "value": "Small"
+                                        },
+                                        {
+                                            "label": "Medium (Min instances: 40, Max instances: 200)",
+                                            "value": "Medium"
+                                        },
+                                        {
+                                            "label": "Large (Min instances: 80, Max instances: 400)",
+                                            "value": "Large"
+                                        },
+                                        {
+                                            "label": "Custom",
+                                            "value": "Custom"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            },
+                            {
+                                "name": "minimum",
+                                "type": "Microsoft.Common.TextBox",
+                                "label": "Minimum Instances",
+                                "toolTip": "Minimum capacity for the Kusto Cluster.",
+                                "defaultValue": "40",
+                                "visible": "[equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Custom')]",
+                                "constraints": {
+                                    "required": true,
+                                    "regex": "^[0-9]+$",
+                                    "validationMessage": "Must be a number."
+                                }
+                            },
+                            {
+                                "name": "maximum",
+                                "type": "Microsoft.Common.TextBox",
+                                "label": "Maximum Instances",
+                                "toolTip": "Maximum capacity for the Kusto Cluster.",
+                                "defaultValue": "200",
+                                "visible": "[equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Custom')]",
+                                "constraints": {
+                                    "required": true,
+                                    "regex": "^[0-9]+$",
+                                    "validationMessage": "Must be a number."
+                                }
+                            },
+                            {
+                                "name": "kustoClusterCapacityInfo",
+                                "type": "Microsoft.Common.TextBlock",
+                                "visible": "[not(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Custom'))]",
+                                "options": {
+                                    "text": "[concat('Minimum Instances: ', if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Small'), '20', if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Medium'), '40', '80')), ', Maximum Instances: ', if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Small'), '100', if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Medium'), '200', '400')))]"
+                                }
+                            },
+                            {
+                                "name": "kustoSkusApi",
+                                "type": "Microsoft.Solutions.ArmApiControl",
+                                "request": {
+                                    "method": "GET",
+                                    "path": "[concat(subscription().id, '/providers/Microsoft.Kusto/locations/', location(), '/skus?api-version=2024-04-13')]"
+                                }
+                            },
+                            {
+                                "name": "kustoClusterSku",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Kusto Cluster SKU",
+                                "toolTip": "The SKU for the Kusto cluster. Determines the VM type, vCPU count, and memory per instance.",
+                                "filter": true,
+                                "defaultValue": "Standard_L32s_v3",
+                                "visible": "[not(steps('computeConfigurations').kustoConfigurations.kustoSkuNotInList)]",
+                                "constraints": {
+                                    "allowedValues": "[map(filter(steps('computeConfigurations').kustoConfigurations.kustoSkusApi.value, (x) => and(equals(toLower(x.resourceType), 'clusters'), equals(toLower(x.tier), 'standard'))), (item) => parse(concat('{\"label\":\"', item.name, '\", \"value\":\"', item.name, '\"}')))]",
+                                    "required": "[not(steps('computeConfigurations').kustoConfigurations.kustoSkuNotInList)]"
+                                }
+                            },
+                            {
+                                "name": "kustoSkuNotInList",
+                                "type": "Microsoft.Common.CheckBox",
+                                "label": "Provide Custom SKU",
+                                "toolTip": "Enable this option if your preferred Kusto Cluster SKU is not available in the dropdown list above."
+                            },
+                            {
+                                "name": "kustoClusterSkuManual",
+                                "type": "Microsoft.Common.TextBox",
+                                "label": "Enter Kusto Cluster SKU",
+                                "toolTip": "Manually enter the Kusto Cluster SKU name (e.g. Standard_L32as_v3). Please check the availability of the requested SKU under your selected region.",
+                                "placeholder": "Standard_L32as_v3",
+                                "visible": "[steps('computeConfigurations').kustoConfigurations.kustoSkuNotInList]",
+                                "constraints": {
+                                    "required": "[steps('computeConfigurations').kustoConfigurations.kustoSkuNotInList]"
+                                }
+                            },
+                            {
+                                "name": "kustoLearnMore",
+                                "type": "Microsoft.Common.TextBlock",
+                                "visible": true,
+                                "options": {
+                                    "link": {
+                                        "label": "Learn more about Kusto Cluster sizes and SKUs",
+                                        "uri": "https://learn.microsoft.com/en-us/azure/data-explorer/manage-cluster-choose-sku"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "complianceOptions",
+                "label": "Compliance",
+                "elements": [
+                    {
+                        "name": "complianceIntroText",
+                        "type": "Microsoft.Common.TextBlock",
+                        "options": {
+                            "text": "The Compliance tab provides options to enable regulatory and audit compliance controls for your Starter Kit deployment. These settings configure additional governance, auditing, and access controls on the deployed resources to meet organizational compliance requirements."
+                        }
+                    },
+                    {
+                        "name": "enableSoxCompliance",
+                        "type": "Microsoft.Common.CheckBox",
+                        "label": "Enable SOX Compliance",
+                        "toolTip": "Enable this option to apply SOX compliance controls to the deployed resources. When enabled, Compliance Monitoring SPN identities are granted monitoring and reader access to the provisioned infrastructure.",
+                        "defaultValue": false
+                    },
+                    {
+                        "name": "complianceMonitoringSpnSection",
+                        "type": "Microsoft.Common.Section",
+                        "label": "Compliance Monitoring SPN Configuration",
+                        "visible": "[steps('complianceOptions').enableSoxCompliance]",
+                        "elements": [
+                            {
+                                "name": "complianceMonitoringSpnAppId",
+                                "type": "Microsoft.Common.TextBox",
+                                "label": "Compliance Monitoring SPN Application (Client) ID",
+                                "toolTip": "The Application (Client) ID of the Compliance Monitoring Service Principal used for SOX compliance monitoring on the Kusto cluster.",
+                                "placeholder": "e.g. dxxfxx8x-x3xx-4xx0-xx8x-xfxx5xxexx5x",
+                                "constraints": {
+                                    "required": true,
+                                    "regex": "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$",
+                                    "validationMessage": "Must be a valid GUID."
+                                }
+                            },
+                            {
+                                "name": "complianceMonitoringSpnPrincipalId",
+                                "type": "Microsoft.Common.TextBox",
+                                "label": "Compliance Monitoring SPN Object (Principal) ID",
+                                "toolTip": "The Object (Principal) ID of the Compliance Monitoring Service Principal. This identity is granted Storage Blob Data Reader at subscription scope and Reader access on the Synapse workspace for SOX compliance.",
+                                "placeholder": "e.g. fxxbxx4x-x8xx-4xxe-xxax-xdxx4xx8xx8x",
+                                "constraints": {
+                                    "required": true,
+                                    "regex": "^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$",
+                                    "validationMessage": "Must be a valid GUID."
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "outputs": {
+            "location": "[location()]",
+            "instanceName": "[basics('instanceConfigSection').instanceName]",
+            "viewerGroupObjectId": "[basics('instanceConfigSection').viewerGroupObjectId]",
+            "attachToCentralDatalake": "[basics('dataSourceConfigSection').attachToCentralDatalake]",
+            "centralManifestPath": "[basics('dataSourceConfigSection').centralManifestPath]",
+            "multiTenantAppPrincipalId": "[basics('dataPushAuthSection').multiTenantAppPrincipalId]",
+            "enableSoxCompliance": "[steps('complianceOptions').enableSoxCompliance]",
+            "complianceMonitoringSpnAppId": "[if(steps('complianceOptions').enableSoxCompliance, steps('complianceOptions').complianceMonitoringSpnSection.complianceMonitoringSpnAppId, '')]",
+            "complianceMonitoringSpnPrincipalId": "[if(steps('complianceOptions').enableSoxCompliance, steps('complianceOptions').complianceMonitoringSpnSection.complianceMonitoringSpnPrincipalId, '')]",
+            "dataProductsArray": "[steps('dataProductsOptions').dataProductsSection.dataProductsArray]",
+            "datasetsToDeploy": {
+                "datasets_Charges": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Charges'), steps('dataProductsOptions').datasetSelectionSection.datasets_Charges, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
+                "datasets_Prices": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Prices'), steps('dataProductsOptions').datasetSelectionSection.datasets_Prices, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
+                "datasets_Products": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Products'), steps('dataProductsOptions').datasetSelectionSection.datasets_Products, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
+                "datasets_Benefits": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Benefits'), steps('dataProductsOptions').datasetSelectionSection.datasets_Benefits, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
+                "datasets_CloudDimensions": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'CloudDimensions'), steps('dataProductsOptions').datasetSelectionSection.datasets_CloudDimensions, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]"
+            },
+            "enableKustoCluster": "[steps('computeConfigurations').enableKustoCluster]",
+            "kustoClusterSku": "[if(steps('computeConfigurations').kustoConfigurations.kustoSkuNotInList, steps('computeConfigurations').kustoConfigurations.kustoClusterSkuManual, steps('computeConfigurations').kustoConfigurations.kustoClusterSku)]",
+            "kustoMinimumInstances": "[if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Small'), 20, if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Medium'), 40, if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Large'), 80, int(steps('computeConfigurations').kustoConfigurations.minimum))))]",
+            "kustoMaximumInstances": "[if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Small'), 100, if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Medium'), 200, if(equals(steps('computeConfigurations').kustoConfigurations.kustoClusterSize, 'Large'), 400, int(steps('computeConfigurations').kustoConfigurations.maximum))))]"
+        }
+    }
+}
