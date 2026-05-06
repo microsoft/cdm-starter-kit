@@ -5,7 +5,7 @@
     "parameters": {
         "config": {
             "basics": {
-                "description": "The CDM Starter Kit is a self-service provisioning tool that deploys all the Azure infrastructure you need to consume CDM data in a single, repeatable operation. It provisions resources such as a Synapse workspace, storage accounts, managed identity and an optional Azure Data Explorer (Kusto) cluster into your Azure subscription.\n\nThe Basics tab captures the foundational configuration for your Starter Kit deployment — where resources are provisioned, how they're named, who gets access, and how CDM data is sourced.",
+                "description": "The Commerce Data Model (CDM) is Microsoft’s standardized, extensible data platform designed to deliver authoritative, analytics-ready commerce data.\n\nThe Starter Kit is a self-service provisioning tool that deploys all the Azure infrastructure you need to consume CDM data in a single, repeatable operation. It provisions resources such as a Synapse workspace, storage accounts, managed identity and an optional Azure Data Explorer (Kusto) cluster into your Azure subscription.\n\nThe Basics tab captures the foundational configuration for your Starter Kit deployment — where resources are provisioned, how they're named, who gets access, and how CDM data is sourced.",
                 "location": {
                     "label": "Location",
                     "resourceTypes": [
