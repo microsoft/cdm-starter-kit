@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.42.1.51946",
-      "templateHash": "16069404038945633221"
+      "version": "0.43.1.21952",
+      "templateHash": "10957603263316767492"
     }
   },
   "functions": [
@@ -1774,7 +1774,7 @@
     "linkedServiceDefinitionContent": "[variables('$fxv#6')]",
     "regionShortMap": "[variables('$fxv#7')]",
     "subscriptionCatalogContent": "[variables('$fxv#8')]",
-    "pwshScriptContent": "# Fail script if any command fails\r\n# $ErrorActionPreference = \"Stop\"\r\n\r\n# Assign script params to parameters object variable.\r\n# NOTE: Parameters are passed as base64(JSON) from Bicep to avoid command-line escaping issues.\r\n$rawArg = if ($args.Count -eq 0) {\r\n    ''\r\n}\r\nelseif ($args.Count -eq 1) {\r\n    $args[0]\r\n}\r\nelse {\r\n    # Shouldn't happen with base64 arguments, but keep a reasonable fallback.\r\n    $args -join ' '\r\n}\r\n\r\nif (-not [string]::IsNullOrEmpty($rawArg)) {\r\n    $rawArg = $rawArg.Trim('\"').Trim(\"'\")\r\n}\r\n\r\nfunction Get-ParamsObjectFromArg {\r\n    param(\r\n        [Parameter(Mandatory = $true)][string] $Arg\r\n    )\r\n\r\n    if ([string]::IsNullOrWhiteSpace($Arg)) {\r\n        throw \"No parameters were provided to the deployment script.\"\r\n    }\r\n\r\n    # Preferred path: base64(JSON)\r\n    try {\r\n        $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Arg))\r\n        return ($decoded | ConvertFrom-Json -Depth 100)\r\n    }\r\n    catch {\r\n        # Backward-compatible fallback: raw JSON\r\n        return ($Arg | ConvertFrom-Json -Depth 100)\r\n    }\r\n}\r\n\r\n$parameters = Get-ParamsObjectFromArg -Arg $rawArg\r\n\r\n$subscriptionId = $parameters.subscriptionId\r\n$synapseWorkspaceName = $parameters.synapseWorkspaceName\r\n$kustoSnapshotLoadNotebookFile = \"KustoSnapshotLoadUsingIndexFile.ipynb\"\r\n$dataExplorationNotebookFile = \"DataExploration.ipynb\"\r\n$synapseKustoIngestionPipelineFile = \"KustoIngestionPipeline.json\"\r\n$synapseKustoOrchestratorPipelineFile = \"KustoOrchestratorPipeline.json\"\r\n$triggerFile = \"KustoCopyPipelineTrigger.json\"\r\n$linkedServiceName = \"CDMDatasetLinkedService\"\r\n$storageAccountName = $parameters.storageAccountName\r\n$datasetName = 'ManifestSchemaDataset'\r\n$linkedServiceTemplate = $parameters.linkedServiceContent\r\n$kustoClusterName = $parameters.kustoClusterName\r\n$environmentSuffix = $parameters.environmentSuffix\r\n$attachToCentralDatalake = $parameters.attachToCentralDatalake\r\n$centralManifestPath = $parameters.centralManifestPath\r\n\r\n# Create Synapse Notebook and Pipeline files from raw JSON content\r\n# Replace environment suffix placeholders in the notebook content to make it environment-specific before uploading to Synapse.\r\n$kustoSnapshotLoadNotebookContent = $parameters.kustoSnapshotLoadNotebookContent | ConvertTo-Json -Depth 100 -Compress\r\n$kustoSnapshotLoadNotebookContent = $kustoSnapshotLoadNotebookContent.Replace(\r\n    \"<storageEnvironmentSuffix>\",\r\n    $environmentSuffix.storage\r\n).Replace(\r\n    \"<sqlServerEnvironmentSuffix>\",\r\n    $environmentSuffix.sqlServerHostName\r\n).Replace(\r\n    \"<frontdoorEnvironmentSuffix>\",\r\n    $environmentSuffix.azureFrontDoorEndpointSuffix\r\n).Replace(\r\n    \"<keyvaultEnvironmentSuffix>\",\r\n    $environmentSuffix.keyvault\r\n).Replace(\r\n    \"<storageAccountName>\",\r\n    $storageAccountName\r\n).Replace(\r\n    \"<kustoClusterName>\",\r\n    $kustoClusterName\r\n)\r\n\r\n$kustoSnapshotLoadNotebookContent | Out-File $kustoSnapshotLoadNotebookFile\r\n\r\n$dataExplorationNotebookContent = $parameters.dataExplorationNotebookContent | ConvertTo-Json -Depth 100 -Compress\r\n$dataExplorationNotebookContent = $dataExplorationNotebookContent.Replace(\r\n    \"<storageEnvironmentSuffix>\",\r\n    $environmentSuffix.storage\r\n).Replace(\r\n    \"<storageAccountName>\",\r\n    $storageAccountName\r\n)\r\n$dataExplorationNotebookContent | Out-File $dataExplorationNotebookFile\r\n\r\n$parameters.triggerPipelineContent | ConvertTo-Json -Depth 100 -Compress | Out-File $triggerFile\r\n$synapseKustoIngestionPipelineContent = $parameters.synapseKustoIngestionPipelineContent | ConvertTo-Json -Depth 100 -Compress\r\n$synapseKustoOrchestratorPipelineContent = $parameters.synapseKustoOrchestratorPipelineContent | ConvertTo-Json -Depth 100 -Compress\r\n\r\n# Parse catalog content\r\n$catalogJson = $parameters.subscriptionCatalogContent\r\n$subscriptionCatalogFile = \"subscription-catalog.json\"\r\n$targetContainer = \"config\"\r\n$targetBlobPath = \"manifest/v$($catalogJson.version)/$subscriptionCatalogFile\"\r\n$storageAccountMap = $parameters.storageAccountMap\r\n$tenantId = $parameters.tenantId\r\n$subscriptionId = $parameters.subscriptionId\r\n# $timestamp = $parameters.timestamp\r\n$dataProductsArray = $parameters.dataProductsArray\r\n$datasetsToDeploy = $parameters.datasetsToDeploy\r\n\r\n# # Authenticate with Azure using Managed Identity\r\n# Write-Host \"Authenticating with Azure...\"\r\n# Connect-AzAccount -Identity\r\n\r\n# Set the specified subscription context\r\nWrite-Host \"Setting Azure subscription context to: $subscriptionId\"\r\nSet-AzContext -SubscriptionId $subscriptionId\r\n\r\n# Set PSGallery as trusted\r\n# Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted\r\n\r\n# Ensure Az.Synapse module is installed\r\nif (-not (Get-Module -ListAvailable -Name Az.Synapse)) {\r\n    Write-Host \"Installing Az.Synapse module...\"\r\n    Install-Module -Name Az.Synapse -Force -Scope CurrentUser\r\n}\r\n\r\n# Deploy the Synapse Notebook\r\n$synapseNotebookFolder = \"CDM\"\r\n\r\nWrite-Host \"Uploading notebook '$kustoSnapshotLoadNotebookFile' to Synapse workspace '$synapseWorkspaceName' under folder '$synapseNotebookFolder'...\"\r\nSet-AzSynapseNotebook -WorkspaceName $synapseWorkspaceName -DefinitionFile $kustoSnapshotLoadNotebookFile -FolderPath $synapseNotebookFolder\r\n\r\nif ($?) {\r\n    Write-Output \"Notebook '$kustoSnapshotLoadNotebookFile' successfully created in Synapse workspace '$synapseWorkspaceName' under folder '$synapseNotebookFolder'.\"\r\n}\r\nelse {\r\n    Write-Error \"Failed to create notebook '$kustoSnapshotLoadNotebookFile'.\"\r\n    exit 1\r\n}\r\n\r\nWrite-Host \"Uploading notebook '$dataExplorationNotebookFile' to Synapse workspace '$synapseWorkspaceName' under folder '$synapseNotebookFolder'...\"\r\nSet-AzSynapseNotebook -WorkspaceName $synapseWorkspaceName -DefinitionFile $dataExplorationNotebookFile -FolderPath $synapseNotebookFolder\r\n\r\nif ($?) {\r\n    Write-Output \"Notebook '$dataExplorationNotebookFile' successfully created in Synapse workspace '$synapseWorkspaceName' under folder '$synapseNotebookFolder'.\"\r\n}\r\nelse {\r\n    Write-Error \"Failed to create notebook '$dataExplorationNotebookFile'.\"\r\n    exit 1\r\n}\r\n\r\n# -----------------------------------\r\n# Prepare Linked Service JSON\r\n# -----------------------------------\r\n$linkedServiceJson = ($linkedServiceTemplate | ConvertTo-Json -Depth 100 -Compress)\r\n$linkedServiceJson = $linkedServiceJson.Replace(\r\n    \"<storageAccountName>\",\r\n    $storageAccountName\r\n).Replace(\"<storageEnvironmentSuffix>\", $environmentSuffix.storage)\r\n\r\n$definitionFile = \"$linkedServiceName.json\"\r\n$linkedServiceJson | Out-File \"$linkedServiceName.json\"\r\n\r\nWrite-Host \"Linked service JSON prepared:\"\r\n# Write-Host $linkedServiceJson\r\n\r\n# -----------------------------------\r\n# Deploy Linked Service to Synapse\r\n# -----------------------------------\r\nWrite-Host \"Deploying linked service '$linkedServiceName' to Synapse workspace '$synapseWorkspaceName'...\"\r\n\r\nSet-AzSynapseLinkedService `\r\n    -WorkspaceName $synapseWorkspaceName `\r\n    -Name $linkedServiceName `\r\n    -DefinitionFile $definitionFile `\r\n    -ErrorAction Stop\r\n\r\nWrite-Host \"✅ Linked service '$linkedServiceName' deployed successfully.\"\r\n\r\n# -----------------------------------\r\n# Prepare Dataset JSON\r\n# -----------------------------------\r\n$datasetFile = \"$datasetName.json\"\r\n\r\n$parameters.datasetFileContent |\r\nConvertTo-Json -Depth 100 -Compress |\r\nOut-File $datasetFile -Encoding utf8\r\n\r\n# -----------------------------------\r\n# Deploy Dataset to Synapse\r\n# -----------------------------------\r\nSet-AzSynapseDataset `\r\n    -WorkspaceName $synapseWorkspaceName `\r\n    -Name $datasetName `\r\n    -DefinitionFile $datasetFile `\r\n    -ErrorAction Stop\r\n\r\nWrite-Host \"✅ Dataset '$datasetName' created successfully.\"\r\n\r\n# Determine Manifest File Path for the pipeline\r\n$manifestFilePath = if ($attachToCentralDatalake -and -not [string]::IsNullOrWhiteSpace($centralManifestPath)) {\r\n    $centralManifestPath\r\n}\r\nelse {\r\n    # Default to the one we are about to upload\r\n    # Format: abfss://<container>@<storageAccount>.dfs.core.windows.net/<path>\r\n    \"abfss://$targetContainer@$storageAccountName.dfs.core.windows.net/$targetBlobPath\"\r\n}\r\n\r\n$pipelineName = \"KustoIngestionPipeline\"\r\n$synapseKustoIngestionPipelineContent.Replace(\r\n    \"<storageAccountName>\",\r\n    $storageAccountName\r\n).Replace(\r\n    \"<storageEnvironmentSuffix>\",\r\n    $environmentSuffix.storage\r\n).Replace(\r\n    \"<manifestFilePath>\",\r\n    $manifestFilePath\r\n) | Out-File $synapseKustoIngestionPipelineFile -Encoding utf8\r\n\r\nWrite-Host \"Uploading pipeline '$pipelineName' to Synapse workspace '$synapseWorkspaceName'...\"\r\nSet-AzSynapsePipeline  -WorkspaceName $synapseWorkspaceName -Name $pipelineName -DefinitionFile $synapseKustoIngestionPipelineFile\r\n\r\nif ($?) {\r\n    Write-Output \"Pipeline '$pipelineName' successfully created in Synapse workspace '$synapseWorkspaceName'.\"\r\n}\r\nelse {\r\n    Write-Error \"Failed to create pipeline '$pipelineName'.\"\r\n    exit 1\r\n}\r\n\r\n# -------------------------------------\r\n# Deploy the KustoOrchestrator Pipeline\r\n# -------------------------------------\r\n$pipelineName = \"KustoOrchestratorPipeline\"\r\n$synapseKustoOrchestratorPipelineContent.Replace(\r\n    \"<storageAccountName>\",\r\n    $storageAccountName\r\n).Replace(\r\n    \"<storageEnvironmentSuffix>\",\r\n    $environmentSuffix.storage\r\n).Replace(\r\n    \"<kustoClusterName>\",\r\n    $kustoClusterName\r\n) | Out-File $synapseKustoOrchestratorPipelineFile -Encoding utf8\r\n\r\nWrite-Host \"Uploading pipeline '$pipelineName' to Synapse workspace '$synapseWorkspaceName'...\"\r\nSet-AzSynapsePipeline  -WorkspaceName $synapseWorkspaceName -Name $pipelineName -DefinitionFile $synapseKustoOrchestratorPipelineFile\r\n\r\nif ($?) {\r\n    Write-Output \"Pipeline '$pipelineName' successfully created in Synapse workspace '$synapseWorkspaceName'.\"\r\n}\r\nelse {\r\n    Write-Error \"Failed to create pipeline '$pipelineName'.\"\r\n    exit 1\r\n}\r\n\r\n# -------------------------------\r\n# Deploy the Trigger\r\n# -------------------------------\r\n\r\n$triggerName = \"KustoCopyPipelineTrigger\"\r\n\r\nWrite-Host \"Uploading trigger '$triggerName'...\"\r\n\r\nSet-AzSynapseTrigger `\r\n    -WorkspaceName $synapseWorkspaceName `\r\n    -Name $triggerName `\r\n    -DefinitionFile $triggerFile\r\n\r\nif ($?) {\r\n    Write-Output \"Trigger '$triggerName' successfully created or updated.\"\r\n}\r\nelse {\r\n    Write-Error \"Failed to create trigger '$triggerName'.\"\r\n    exit 1\r\n}\r\n\r\n# if ($?) {\r\n#     Write-Output \"Trigger '$triggerName' started successfully.\"\r\n# } else {\r\n#     Write-Error \"Trigger '$triggerName' could not be started.\"\r\n#     exit 1\r\n# }\r\n\r\n# -----------------------------------\r\n# Upload subscription-catalog.json to Blob Storage\r\n# -----------------------------------\r\n\r\n# Generate timestamp in ISO 8601 extended format (UTC)\r\n$formattedTimestamp = (Get-Date).ToUniversalTime().ToString(\"yyyy-MM-ddTHH:mm:ssZ\")\r\n\r\n# Update Subscriber Info\r\nif ($null -ne $catalogJson.subscriber) {\r\n    Write-Host \"Updating subscriber info...\"\r\n    $catalogJson.subscriber.tenant_id = $tenantId\r\n    $catalogJson.subscriber.subscription_id = $subscriptionId\r\n    $catalogJson.subscriber.last_updated_at = $formattedTimestamp\r\n}\r\n\r\n# Filter Data Products based on input array\r\nif ($null -ne $catalogJson.data_products -and $null -ne $dataProductsArray) {\r\n    Write-Host \"Filtering data products to include only: $($dataProductsArray -join ', ')\"\r\n    $filteredProducts = @()\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        if ($dataProductsArray -contains $dp.name) {\r\n            $filteredProducts += $dp\r\n        }\r\n    }\r\n    $catalogJson.data_products = $filteredProducts\r\n    Write-Host \"Filtered data products count: $($catalogJson.data_products.Count)\"\r\n}\r\n\r\n# Filter Tables based on input datasets\r\nif ($null -ne $catalogJson.data_products -and $null -ne $datasetsToDeploy) {\r\n    Write-Host \"Filtering tables within data products based on selected datasets object.\"\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        if ($null -ne $dp.tables) {\r\n            # Map Data Product name to its specific key in datasetsToDeploy object\r\n            $dpKey = \"datasets_$($dp.name)\"\r\n            $selectedDatasets = $datasetsToDeploy.$dpKey\r\n\r\n            Write-Host \"Processing Data Product: $($dp.name) using key: $dpKey. Selected datasets count: $($selectedDatasets.Count)\"\r\n\r\n            $filteredTables = @()\r\n            foreach ($table in $dp.tables) {\r\n                # Handle both string and object table definitions\r\n                $tableName = if ($table -is [string]) { $table } else { $table.name }\r\n\r\n                # Check match against the datasets selected for THIS specific Data Product\r\n                if ($null -ne $selectedDatasets -and $selectedDatasets -contains $tableName) {\r\n                    $filteredTables += $table\r\n                }\r\n            }\r\n            $dp.tables = $filteredTables\r\n            Write-Host \"Remaining tables in $($dp.name): $($dp.tables.Count)\"\r\n        }\r\n    }\r\n}\r\n\r\nif ($null -ne $storageAccountMap -and $null -ne $catalogJson.data_products) {\r\n    Write-Host \"Updating storage accounts in subscription-catalog.json...\"\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        # Check if we have mapped accounts for this data product name\r\n        # Note: Bicep pass object keys as-is (Case \"Charges\", \"Products\").\r\n        # JSON parsing in PS creates PSCustomObject. Properties lookup is generally case-insensitive in PS.\r\n        if ($storageAccountMap.PSObject.Properties.Match($dp.name).Count -gt 0) {\r\n            $accounts = $storageAccountMap.($dp.name)\r\n\r\n            if ($null -ne $accounts -and $accounts.Count -gt 0) {\r\n                Write-Host \"Updating accounts for '$($dp.name)': found $($accounts.Count) accounts.\"\r\n\r\n                # Update primary storage account\r\n                if ($null -ne $dp.output_configuration) {\r\n                    $dp.output_configuration.storage_account = $accounts[0]\r\n                }\r\n\r\n                # Update secondary storage accounts\r\n                if ($accounts.Count -gt 1) {\r\n                    # Skip the first one, take the rest\r\n                    # PS slicing [1..($count-1)] works\r\n                    $secondaries = $accounts[1..($accounts.Count - 1)]\r\n                    $dp.output_configuration.additional_storage_accounts = $secondaries\r\n                }\r\n                else {\r\n                    $dp.output_configuration.additional_storage_accounts = @()\r\n                }\r\n            }\r\n            else {\r\n                Write-Host \"No accounts found in map for '$($dp.name)'.\"\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n# Scenario: Attach to Central Manifest\r\nif ($attachToCentralDatalake) {\r\n    Write-Host \"Trimming catalog for central manifest scenario...\"\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        Write-Host \"Removing storage configuration from Data Product: $($dp.name)\"\r\n        $dp.PSObject.Properties.Remove(\"output_configuration\")\r\n    }\r\n}\r\n\r\n# Write content to local file (formatted)\r\n$catalogJson | ConvertTo-Json -Depth 100 | Out-File $subscriptionCatalogFile -Encoding utf8\r\n\r\nWrite-Host \"Uploading '$subscriptionCatalogFile' to container '$targetContainer' at path '$targetBlobPath' in storage account '$storageAccountName'...\"\r\n\r\n# Create storage context using Managed Identity\r\n$ctx = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount\r\n\r\n# Check if container exists, create if not\r\nif (-not (Get-AzStorageContainer -Name $targetContainer -Context $ctx -ErrorAction SilentlyContinue)) {\r\n    Write-Host \"Container '$targetContainer' does not exist. Creating...\"\r\n    New-AzStorageContainer -Name $targetContainer -Context $ctx -Permission Off\r\n}\r\n\r\n# Upload full catalog\r\n$filesToUpload = @(\r\n    @{ Local = $subscriptionCatalogFile; Remote = $targetBlobPath }\r\n)\r\n\r\nforeach ($f in $filesToUpload) {\r\n    Write-Host \"Uploading '$($f.Local)' to '$targetContainer' at path '$($f.Remote)'...\"\r\n    Set-AzStorageBlobContent `\r\n        -File $f.Local `\r\n        -Container $targetContainer `\r\n        -Blob $f.Remote `\r\n        -Context $ctx `\r\n        -Force\r\n\r\n    if ($?) {\r\n        Write-Output \"File '$($f.Local)' successfully uploaded to '$targetContainer/$($f.Remote)'.\"\r\n    }\r\n    else {\r\n        Write-Error \"Failed to upload '$($f.Local)' to storage.\"\r\n        exit 1\r\n    }\r\n}",
+    "pwshScriptContent": "# Fail script if any command fails\r\n# $ErrorActionPreference = \"Stop\"\r\n\r\n# Assign script params to parameters object variable.\r\n# NOTE: Parameters are passed as base64(JSON) from Bicep to avoid command-line escaping issues.\r\n$rawArg = if ($args.Count -eq 0) {\r\n    ''\r\n}\r\nelseif ($args.Count -eq 1) {\r\n    $args[0]\r\n}\r\nelse {\r\n    # Shouldn't happen with base64 arguments, but keep a reasonable fallback.\r\n    $args -join ' '\r\n}\r\n\r\nif (-not [string]::IsNullOrEmpty($rawArg)) {\r\n    $rawArg = $rawArg.Trim('\"').Trim(\"'\")\r\n}\r\n\r\nfunction Get-ParamsObjectFromArg {\r\n    param(\r\n        [Parameter(Mandatory = $true)][string] $Arg\r\n    )\r\n\r\n    if ([string]::IsNullOrWhiteSpace($Arg)) {\r\n        throw \"No parameters were provided to the deployment script.\"\r\n    }\r\n\r\n    # Preferred path: base64(JSON)\r\n    try {\r\n        $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Arg))\r\n        return ($decoded | ConvertFrom-Json -Depth 100)\r\n    }\r\n    catch {\r\n        # Backward-compatible fallback: raw JSON\r\n        return ($Arg | ConvertFrom-Json -Depth 100)\r\n    }\r\n}\r\n\r\n$parameters = Get-ParamsObjectFromArg -Arg $rawArg\r\n\r\n$subscriptionId = $parameters.subscriptionId\r\n$synapseWorkspaceName = $parameters.synapseWorkspaceName\r\n$kustoSnapshotLoadNotebookFile = \"KustoSnapshotLoadUsingIndexFile.ipynb\"\r\n$dataExplorationNotebookFile = \"DataExploration.ipynb\"\r\n$synapseKustoIngestionPipelineFile = \"KustoIngestionPipeline.json\"\r\n$synapseKustoOrchestratorPipelineFile = \"KustoOrchestratorPipeline.json\"\r\n$triggerFile = \"KustoCopyPipelineTrigger.json\"\r\n$linkedServiceName = \"CDMDatasetLinkedService\"\r\n$storageAccountName = $parameters.storageAccountName\r\n$datasetName = 'ManifestSchemaDataset'\r\n$linkedServiceTemplate = $parameters.linkedServiceContent\r\n$kustoClusterName = $parameters.kustoClusterName\r\n$environmentSuffix = $parameters.environmentSuffix\r\n$attachToCentralDatalake = $parameters.attachToCentralDatalake\r\n$centralManifestPath = $parameters.centralManifestPath\r\n$enableKustoCluster = $parameters.enableKustoCluster\r\n\r\n# Create Synapse Notebook and Pipeline files from raw JSON content\r\n# Replace environment suffix placeholders in the notebook content to make it environment-specific before uploading to Synapse.\r\n\r\nif ($enableKustoCluster) {\r\n    $kustoSnapshotLoadNotebookContent = $parameters.kustoSnapshotLoadNotebookContent | ConvertTo-Json -Depth 100 -Compress\r\n    $kustoSnapshotLoadNotebookContent = $kustoSnapshotLoadNotebookContent.Replace(\r\n        \"<storageEnvironmentSuffix>\",\r\n        $environmentSuffix.storage\r\n    ).Replace(\r\n        \"<sqlServerEnvironmentSuffix>\",\r\n        $environmentSuffix.sqlServerHostName\r\n    ).Replace(\r\n        \"<frontdoorEnvironmentSuffix>\",\r\n        $environmentSuffix.azureFrontDoorEndpointSuffix\r\n    ).Replace(\r\n        \"<keyvaultEnvironmentSuffix>\",\r\n        $environmentSuffix.keyvault\r\n    ).Replace(\r\n        \"<storageAccountName>\",\r\n        $storageAccountName\r\n    ).Replace(\r\n        \"<kustoClusterName>\",\r\n        $kustoClusterName\r\n    )\r\n\r\n    $kustoSnapshotLoadNotebookContent | Out-File $kustoSnapshotLoadNotebookFile\r\n\r\n    $parameters.triggerPipelineContent | ConvertTo-Json -Depth 100 -Compress | Out-File $triggerFile\r\n    $synapseKustoIngestionPipelineContent = $parameters.synapseKustoIngestionPipelineContent | ConvertTo-Json -Depth 100 -Compress\r\n    $synapseKustoOrchestratorPipelineContent = $parameters.synapseKustoOrchestratorPipelineContent | ConvertTo-Json -Depth 100 -Compress\r\n}\r\n\r\n$dataExplorationNotebookContent = $parameters.dataExplorationNotebookContent | ConvertTo-Json -Depth 100 -Compress\r\n$dataExplorationNotebookContent = $dataExplorationNotebookContent.Replace(\r\n    \"<storageEnvironmentSuffix>\",\r\n    $environmentSuffix.storage\r\n).Replace(\r\n    \"<storageAccountName>\",\r\n    $storageAccountName\r\n)\r\n$dataExplorationNotebookContent | Out-File $dataExplorationNotebookFile\r\n\r\n# Parse catalog content\r\n$catalogJson = $parameters.subscriptionCatalogContent\r\n$subscriptionCatalogFile = \"subscription-catalog.json\"\r\n$targetContainer = \"config\"\r\n$targetBlobPath = \"manifest/v$($catalogJson.version)/$subscriptionCatalogFile\"\r\n$storageAccountMap = $parameters.storageAccountMap\r\n$tenantId = $parameters.tenantId\r\n$subscriptionId = $parameters.subscriptionId\r\n# $timestamp = $parameters.timestamp\r\n$dataProductsArray = $parameters.dataProductsArray\r\n$datasetsToDeploy = $parameters.datasetsToDeploy\r\n\r\n# # Authenticate with Azure using Managed Identity\r\n# Write-Host \"Authenticating with Azure...\"\r\n# Connect-AzAccount -Identity\r\n\r\n# Set the specified subscription context\r\nWrite-Host \"Setting Azure subscription context to: $subscriptionId\"\r\nSet-AzContext -SubscriptionId $subscriptionId\r\n\r\n# Set PSGallery as trusted\r\n# Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted\r\n\r\n# Ensure Az.Synapse module is installed\r\nif (-not (Get-Module -ListAvailable -Name Az.Synapse)) {\r\n    Write-Host \"Installing Az.Synapse module...\"\r\n    Install-Module -Name Az.Synapse -Force -Scope CurrentUser\r\n}\r\n\r\n# Deploy the Synapse Notebooks\r\n$synapseNotebookFolder = \"CDM\"\r\n\r\n# DataExploration notebook is always deployed regardless of Kusto cluster setting\r\nWrite-Host \"Uploading notebook '$dataExplorationNotebookFile' to Synapse workspace '$synapseWorkspaceName' under folder '$synapseNotebookFolder'...\"\r\nSet-AzSynapseNotebook -WorkspaceName $synapseWorkspaceName -DefinitionFile $dataExplorationNotebookFile -FolderPath $synapseNotebookFolder\r\n\r\nif ($?) {\r\n    Write-Output \"Notebook '$dataExplorationNotebookFile' successfully created in Synapse workspace '$synapseWorkspaceName' under folder '$synapseNotebookFolder'.\"\r\n}\r\nelse {\r\n    Write-Error \"Failed to create notebook '$dataExplorationNotebookFile'.\"\r\n    exit 1\r\n}\r\n\r\nif ($enableKustoCluster) {\r\n    Write-Host \"Uploading notebook '$kustoSnapshotLoadNotebookFile' to Synapse workspace '$synapseWorkspaceName' under folder '$synapseNotebookFolder'...\"\r\n    Set-AzSynapseNotebook -WorkspaceName $synapseWorkspaceName -DefinitionFile $kustoSnapshotLoadNotebookFile -FolderPath $synapseNotebookFolder\r\n\r\n    if ($?) {\r\n        Write-Output \"Notebook '$kustoSnapshotLoadNotebookFile' successfully created in Synapse workspace '$synapseWorkspaceName' under folder '$synapseNotebookFolder'.\"\r\n    }\r\n    else {\r\n        Write-Error \"Failed to create notebook '$kustoSnapshotLoadNotebookFile'.\"\r\n        exit 1\r\n    }\r\n}\r\n\r\n# -----------------------------------\r\n# Kusto-Specific Deployments (LinkedService, Dataset, Pipelines, Trigger)\r\n# Only deployed when Kusto cluster is enabled\r\n# -----------------------------------\r\nif ($enableKustoCluster) {\r\n    # -----------------------------------\r\n    # Prepare Linked Service JSON\r\n    # -----------------------------------\r\n    $linkedServiceJson = ($linkedServiceTemplate | ConvertTo-Json -Depth 100 -Compress)\r\n    $linkedServiceJson = $linkedServiceJson.Replace(\r\n        \"<storageAccountName>\",\r\n        $storageAccountName\r\n    ).Replace(\"<storageEnvironmentSuffix>\", $environmentSuffix.storage)\r\n\r\n    $definitionFile = \"$linkedServiceName.json\"\r\n    $linkedServiceJson | Out-File \"$linkedServiceName.json\"\r\n\r\n    Write-Host \"Linked service JSON prepared:\"\r\n\r\n    # -----------------------------------\r\n    # Deploy Linked Service to Synapse\r\n    # -----------------------------------\r\n    Write-Host \"Deploying linked service '$linkedServiceName' to Synapse workspace '$synapseWorkspaceName'...\"\r\n\r\n    Set-AzSynapseLinkedService `\r\n        -WorkspaceName $synapseWorkspaceName `\r\n        -Name $linkedServiceName `\r\n        -DefinitionFile $definitionFile `\r\n        -ErrorAction Stop\r\n\r\n    Write-Host \"✅ Linked service '$linkedServiceName' deployed successfully.\"\r\n\r\n    # -----------------------------------\r\n    # Prepare Dataset JSON\r\n    # -----------------------------------\r\n    $datasetFile = \"$datasetName.json\"\r\n\r\n    $parameters.datasetFileContent |\r\n    ConvertTo-Json -Depth 100 -Compress |\r\n    Out-File $datasetFile -Encoding utf8\r\n\r\n    # -----------------------------------\r\n    # Deploy Dataset to Synapse\r\n    # -----------------------------------\r\n    Set-AzSynapseDataset `\r\n        -WorkspaceName $synapseWorkspaceName `\r\n        -Name $datasetName `\r\n        -DefinitionFile $datasetFile `\r\n        -ErrorAction Stop\r\n\r\n    Write-Host \"✅ Dataset '$datasetName' created successfully.\"\r\n\r\n    # Determine Manifest File Path for the pipeline\r\n    $manifestFilePath = if ($attachToCentralDatalake -and -not [string]::IsNullOrWhiteSpace($centralManifestPath)) {\r\n        $centralManifestPath\r\n    }\r\n    else {\r\n        # Default to the one we are about to upload\r\n        # Format: abfss://<container>@<storageAccount>.dfs.core.windows.net/<path>\r\n        \"abfss://$targetContainer@$storageAccountName.dfs.core.windows.net/$targetBlobPath\"\r\n    }\r\n\r\n    $pipelineName = \"KustoIngestionPipeline\"\r\n    $synapseKustoIngestionPipelineContent.Replace(\r\n        \"<storageAccountName>\",\r\n        $storageAccountName\r\n    ).Replace(\r\n        \"<storageEnvironmentSuffix>\",\r\n        $environmentSuffix.storage\r\n    ).Replace(\r\n        \"<manifestFilePath>\",\r\n        $manifestFilePath\r\n    ) | Out-File $synapseKustoIngestionPipelineFile -Encoding utf8\r\n\r\n    Write-Host \"Uploading pipeline '$pipelineName' to Synapse workspace '$synapseWorkspaceName'...\"\r\n    Set-AzSynapsePipeline  -WorkspaceName $synapseWorkspaceName -Name $pipelineName -DefinitionFile $synapseKustoIngestionPipelineFile\r\n\r\n    if ($?) {\r\n        Write-Output \"Pipeline '$pipelineName' successfully created in Synapse workspace '$synapseWorkspaceName'.\"\r\n    }\r\n    else {\r\n        Write-Error \"Failed to create pipeline '$pipelineName'.\"\r\n        exit 1\r\n    }\r\n\r\n    # -------------------------------------\r\n    # Deploy the KustoOrchestrator Pipeline\r\n    # -------------------------------------\r\n    $pipelineName = \"KustoOrchestratorPipeline\"\r\n    $synapseKustoOrchestratorPipelineContent.Replace(\r\n        \"<storageAccountName>\",\r\n        $storageAccountName\r\n    ).Replace(\r\n        \"<storageEnvironmentSuffix>\",\r\n        $environmentSuffix.storage\r\n    ).Replace(\r\n        \"<kustoClusterName>\",\r\n        $kustoClusterName\r\n    ) | Out-File $synapseKustoOrchestratorPipelineFile -Encoding utf8\r\n\r\n    Write-Host \"Uploading pipeline '$pipelineName' to Synapse workspace '$synapseWorkspaceName'...\"\r\n    Set-AzSynapsePipeline  -WorkspaceName $synapseWorkspaceName -Name $pipelineName -DefinitionFile $synapseKustoOrchestratorPipelineFile\r\n\r\n    if ($?) {\r\n        Write-Output \"Pipeline '$pipelineName' successfully created in Synapse workspace '$synapseWorkspaceName'.\"\r\n    }\r\n    else {\r\n        Write-Error \"Failed to create pipeline '$pipelineName'.\"\r\n        exit 1\r\n    }\r\n\r\n    # -------------------------------\r\n    # Deploy the Trigger\r\n    # -------------------------------\r\n\r\n    $triggerName = \"KustoCopyPipelineTrigger\"\r\n\r\n    Write-Host \"Uploading trigger '$triggerName'...\"\r\n\r\n    Set-AzSynapseTrigger `\r\n        -WorkspaceName $synapseWorkspaceName `\r\n        -Name $triggerName `\r\n        -DefinitionFile $triggerFile\r\n\r\n    if ($?) {\r\n        Write-Output \"Trigger '$triggerName' successfully created or updated.\"\r\n    }\r\n    else {\r\n        Write-Error \"Failed to create trigger '$triggerName'.\"\r\n        exit 1\r\n    }\r\n}\r\nelse {\r\n    Write-Host \"Kusto cluster is disabled. Skipping LinkedService, Dataset, Pipelines, and Trigger deployment.\"\r\n}\r\n\r\n# -----------------------------------\r\n# Upload subscription-catalog.json to Blob Storage\r\n# -----------------------------------\r\n\r\n# Generate timestamp in ISO 8601 extended format (UTC)\r\n$formattedTimestamp = (Get-Date).ToUniversalTime().ToString(\"yyyy-MM-ddTHH:mm:ssZ\")\r\n\r\n# Filter Data Products based on input array\r\nif ($null -ne $catalogJson.data_products -and $null -ne $dataProductsArray) {\r\n    Write-Host \"Filtering data products to include only: $($dataProductsArray -join ', ')\"\r\n    $filteredProducts = @()\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        if ($dataProductsArray -contains $dp.name) {\r\n            $filteredProducts += $dp\r\n        }\r\n    }\r\n    $catalogJson.data_products = $filteredProducts\r\n    Write-Host \"Filtered data products count: $($catalogJson.data_products.Count)\"\r\n}\r\n\r\n# Filter Tables based on input datasets\r\nif ($null -ne $catalogJson.data_products -and $null -ne $datasetsToDeploy) {\r\n    Write-Host \"Filtering tables within data products based on selected datasets object.\"\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        if ($null -ne $dp.tables) {\r\n            # Map Data Product name to its specific key in datasetsToDeploy object\r\n            $dpKey = \"datasets_$($dp.name)\"\r\n            $selectedDatasets = $datasetsToDeploy.$dpKey\r\n\r\n            Write-Host \"Processing Data Product: $($dp.name) using key: $dpKey. Selected datasets count: $($selectedDatasets.Count)\"\r\n\r\n            $filteredTables = @()\r\n            foreach ($table in $dp.tables) {\r\n                # Handle both string and object table definitions\r\n                $tableName = if ($table -is [string]) { $table } else { $table.name }\r\n\r\n                # Check match against the datasets selected for THIS specific Data Product\r\n                if ($null -ne $selectedDatasets -and $selectedDatasets -contains $tableName) {\r\n                    $filteredTables += $table\r\n                }\r\n            }\r\n            $dp.tables = $filteredTables\r\n            Write-Host \"Remaining tables in $($dp.name): $($dp.tables.Count)\"\r\n        }\r\n    }\r\n}\r\n\r\nif ($null -ne $storageAccountMap -and $null -ne $catalogJson.data_products) {\r\n    Write-Host \"Updating storage accounts in subscription-catalog.json...\"\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        # Check if we have mapped accounts for this data product name\r\n        # Note: Bicep pass object keys as-is (Case \"Charges\", \"Products\").\r\n        # JSON parsing in PS creates PSCustomObject. Properties lookup is generally case-insensitive in PS.\r\n        if ($storageAccountMap.PSObject.Properties.Match($dp.name).Count -gt 0) {\r\n            $accounts = $storageAccountMap.($dp.name)\r\n\r\n            if ($null -ne $accounts -and $accounts.Count -gt 0) {\r\n                Write-Host \"Updating accounts for '$($dp.name)': found $($accounts.Count) accounts.\"\r\n\r\n                # Update primary storage account\r\n                if ($null -ne $dp.output_configuration) {\r\n                    $dp.output_configuration.storage_account = $accounts[0]\r\n                }\r\n\r\n                # Update secondary storage accounts\r\n                if ($accounts.Count -gt 1) {\r\n                    # Skip the first one, take the rest\r\n                    # PS slicing [1..($count-1)] works\r\n                    $secondaries = $accounts[1..($accounts.Count - 1)]\r\n                    $dp.output_configuration.additional_storage_accounts = $secondaries\r\n                }\r\n                else {\r\n                    $dp.output_configuration.additional_storage_accounts = @()\r\n                }\r\n            }\r\n            else {\r\n                Write-Host \"No accounts found in map for '$($dp.name)'.\"\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\n# Scenario: Attach to Central Manifest\r\nif ($attachToCentralDatalake) {\r\n    Write-Host \"Trimming catalog for central manifest scenario...\"\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        Write-Host \"Removing storage configuration from Data Product: $($dp.name)\"\r\n        $dp.PSObject.Properties.Remove(\"output_configuration\")\r\n    }\r\n}\r\n\r\n# Create storage context using Managed Identity\r\n$ctx = New-AzStorageContext -StorageAccountName $storageAccountName -UseConnectedAccount\r\n\r\n# Check if container exists, create if not\r\nif (-not (Get-AzStorageContainer -Name $targetContainer -Context $ctx -ErrorAction SilentlyContinue)) {\r\n    Write-Host \"Container '$targetContainer' does not exist. Creating...\"\r\n    New-AzStorageContainer -Name $targetContainer -Context $ctx -Permission Off\r\n}\r\n\r\n# -----------------------------------\r\n# Merge with existing subscription-catalog.json from Blob Storage\r\n# Only add new data products; preserve existing entries (including manual edits)\r\n# -----------------------------------\r\nWrite-Host \"Checking for existing subscription-catalog.json in storage account '$storageAccountName'...\"\r\n\r\n$existingCatalog = $null\r\n$tempExistingFile = \"existing-subscription-catalog.json\"\r\n\r\ntry {\r\n    $blobExists = Get-AzStorageBlob -Container $targetContainer -Blob $targetBlobPath -Context $ctx -ErrorAction SilentlyContinue\r\n    if ($null -ne $blobExists) {\r\n        Write-Host \"Found existing subscription-catalog.json in storage. Downloading for merge...\"\r\n        Get-AzStorageBlobContent `\r\n            -Container $targetContainer `\r\n            -Blob $targetBlobPath `\r\n            -Destination $tempExistingFile `\r\n            -Context $ctx `\r\n            -Force | Out-Null\r\n\r\n        $existingCatalog = Get-Content $tempExistingFile -Raw | ConvertFrom-Json\r\n        Write-Host \"Existing catalog loaded. Data products found: $($existingCatalog.data_products.Count)\"\r\n\r\n        # Save a timestamped backup of the existing manifest to internal container for history\r\n        $historyTimestamp = (Get-Date).ToUniversalTime().ToString(\"yyyy-MM-ddTHH-mm-ssZ\")\r\n        $historyContainer = \"internal\"\r\n        $historyBlobPath = \"manifest-history/subscription-catalog_$historyTimestamp.json\"\r\n\r\n        Write-Host \"Saving manifest backup to '$historyContainer/$historyBlobPath'...\"\r\n\r\n        # Ensure internal container exists\r\n        if (-not (Get-AzStorageContainer -Name $historyContainer -Context $ctx -ErrorAction SilentlyContinue)) {\r\n            Write-Host \"Container '$historyContainer' does not exist. Creating...\"\r\n            New-AzStorageContainer -Name $historyContainer -Context $ctx -Permission Off\r\n        }\r\n\r\n        Set-AzStorageBlobContent `\r\n            -File $tempExistingFile `\r\n            -Container $historyContainer `\r\n            -Blob $historyBlobPath `\r\n            -Context $ctx `\r\n            -Force | Out-Null\r\n\r\n        Write-Host \"✅ Manifest backup saved: $historyContainer/$historyBlobPath\"\r\n    }\r\n    else {\r\n        Write-Host \"No existing subscription-catalog.json found. Will upload fresh catalog.\"\r\n    }\r\n}\r\ncatch {\r\n    Write-Host \"Could not retrieve existing catalog (may not exist yet): $($_.Exception.Message)\"\r\n}\r\n\r\nif ($null -ne $existingCatalog -and $null -ne $existingCatalog.data_products) {\r\n    Write-Host \"Merging catalogs: preserving existing entries, merging tables within existing data products...\"\r\n\r\n    # Build a lookup of existing data products by name\r\n    $existingProductMap = @{}\r\n    foreach ($existingDp in $existingCatalog.data_products) {\r\n        $existingProductMap[$existingDp.name] = $existingDp\r\n    }\r\n\r\n    # Merge logic: add new data products, and for existing ones merge tables\r\n    $newProducts = @()\r\n    foreach ($dp in $catalogJson.data_products) {\r\n        if (-not $existingProductMap.ContainsKey($dp.name)) {\r\n            Write-Host \"  [NEW] Adding data product: $($dp.name)\"\r\n            $newProducts += $dp\r\n        }\r\n        else {\r\n            # Data product exists — merge tables (add new tables, preserve existing)\r\n            $existingDp = $existingProductMap[$dp.name]\r\n\r\n            if ($null -ne $dp.tables -and $dp.tables.Count -gt 0) {\r\n                # Build lookup of existing table names\r\n                $existingTableNames = @{}\r\n                if ($null -ne $existingDp.tables) {\r\n                    foreach ($t in $existingDp.tables) {\r\n                        $tableName = if ($t -is [string]) { $t } else { $t.name }\r\n                        $existingTableNames[$tableName] = $true\r\n                    }\r\n                }\r\n\r\n                # Add only new tables that don't exist in storage\r\n                $newTables = @()\r\n                foreach ($table in $dp.tables) {\r\n                    $tableName = if ($table -is [string]) { $table } else { $table.name }\r\n                    if (-not $existingTableNames.ContainsKey($tableName)) {\r\n                        Write-Host \"  [NEW TABLE] Adding table '$tableName' to data product '$($dp.name)'\"\r\n                        $newTables += $table\r\n                    }\r\n                    else {\r\n                        Write-Host \"  [SKIP TABLE] Table '$tableName' already exists in '$($dp.name)'. Preserving existing entry.\"\r\n                    }\r\n                }\r\n\r\n                if ($newTables.Count -gt 0) {\r\n                    $existingDp.tables = @($existingDp.tables) + $newTables\r\n                    Write-Host \"  Merged $($newTables.Count) new table(s) into '$($dp.name)'. Total tables: $($existingDp.tables.Count)\"\r\n                }\r\n                else {\r\n                    Write-Host \"  [SKIP] Data product '$($dp.name)' — no new tables to add. Preserving existing entry.\"\r\n                }\r\n            }\r\n            else {\r\n                Write-Host \"  [SKIP] Data product '$($dp.name)' already exists in storage. Preserving existing entry.\"\r\n            }\r\n        }\r\n    }\r\n\r\n    # Merge: keep all existing data products (with merged tables) + append only new data products\r\n    $mergedProducts = @($existingCatalog.data_products) + $newProducts\r\n    $catalogJson.data_products = $mergedProducts\r\n\r\n    # Preserve subscriber info from existing catalog if it was previously set\r\n    if ($null -ne $existingCatalog.subscriber -and $existingCatalog.subscriber.tenant_id -ne \"<tenantId>\") {\r\n        if ($newProducts.Count -eq 0) {\r\n            Write-Host \"No new data products to add. Existing entries preserved (tables merged if applicable).\"\r\n        }\r\n        else {\r\n            Write-Host \"Added $($newProducts.Count) new data product(s) to existing catalog.\"\r\n        }\r\n    }\r\n\r\n    Write-Host \"Merged catalog total data products: $($catalogJson.data_products.Count)\"\r\n\r\n    # Cleanup temp file\r\n    if (Test-Path $tempExistingFile) {\r\n        Remove-Item $tempExistingFile -Force\r\n    }\r\n}\r\nelse {\r\n    Write-Host \"No existing catalog to merge with. Using current deployment catalog as-is.\"\r\n}\r\n\r\n# -----------------------------------\r\n# Update Subscriber Info\r\n# On first run, set all fields. On subsequent runs, only update last_updated_at to preserve manual edits (org_name, etc.)\r\n# -----------------------------------\r\nif ($null -ne $catalogJson.subscriber) {\r\n    if ($null -ne $existingCatalog -and $null -ne $existingCatalog.subscriber -and $existingCatalog.subscriber.tenant_id -ne \"<tenantId>\") {\r\n        Write-Host \"Existing subscriber info found. Preserving all fields, only updating last_updated_at...\"\r\n        $catalogJson.subscriber = $existingCatalog.subscriber\r\n        $catalogJson.subscriber.last_updated_at = $formattedTimestamp\r\n    }\r\n    else {\r\n        Write-Host \"First-time subscriber setup. Setting all subscriber fields...\"\r\n        $catalogJson.subscriber.tenant_id = $tenantId\r\n        $catalogJson.subscriber.subscription_id = $subscriptionId\r\n        $catalogJson.subscriber.last_updated_at = $formattedTimestamp\r\n    }\r\n}\r\n\r\n# Write content to local file (formatted)\r\n$catalogJson | ConvertTo-Json -Depth 100 | Out-File $subscriptionCatalogFile -Encoding utf8\r\n\r\nWrite-Host \"Uploading '$subscriptionCatalogFile' to container '$targetContainer' at path '$targetBlobPath' in storage account '$storageAccountName'...\"\r\n\r\n# Upload full catalog\r\n$filesToUpload = @(\r\n    @{ Local = $subscriptionCatalogFile; Remote = $targetBlobPath }\r\n)\r\n\r\nforeach ($f in $filesToUpload) {\r\n    Write-Host \"Uploading '$($f.Local)' to '$targetContainer' at path '$($f.Remote)'...\"\r\n    Set-AzStorageBlobContent `\r\n        -File $f.Local `\r\n        -Container $targetContainer `\r\n        -Blob $f.Remote `\r\n        -Context $ctx `\r\n        -Force\r\n\r\n    if ($?) {\r\n        Write-Output \"File '$($f.Local)' successfully uploaded to '$targetContainer/$($f.Remote)'.\"\r\n    }\r\n    else {\r\n        Write-Error \"Failed to upload '$($f.Local)' to storage.\"\r\n        exit 1\r\n    }\r\n}",
     "profileName": "defaultProfile",
     "accessMode": "Learning",
     "privateStorageAccountName": "[toLower(format('{0}sa{1}pvt', parameters('instanceName'), variables('regionShortMap')[variables('location')]))]",
@@ -1821,7 +1821,8 @@
       "subscriptionCatalogContent": "[variables('subscriptionCatalogContent')]",
       "storageAccountMap": "[variables('storageAccountMap')]",
       "attachToCentralDatalake": "[parameters('attachToCentralDatalake')]",
-      "centralManifestPath": "[parameters('centralManifestPath')]"
+      "centralManifestPath": "[parameters('centralManifestPath')]",
+      "enableKustoCluster": "[parameters('enableKustoCluster')]"
     },
     "complianceMonitoringSPNObjectId": "[parameters('complianceMonitoringSpnPrincipalId')]",
     "privateStorageAccountMetadata": {
@@ -1889,8 +1890,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12409465377820738271"
+              "version": "0.43.1.21952",
+              "templateHash": "4673141357592491689"
             }
           },
           "parameters": {
@@ -1952,8 +1953,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "7497173555268369314"
+              "version": "0.43.1.21952",
+              "templateHash": "11052518026356071439"
             }
           },
           "parameters": {
@@ -2027,8 +2028,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "8625832270251865723"
+              "version": "0.43.1.21952",
+              "templateHash": "18165791034455500810"
             }
           },
           "parameters": {
@@ -2131,8 +2132,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "86820201133730094"
+              "version": "0.43.1.21952",
+              "templateHash": "5594268495465696493"
             }
           },
           "parameters": {
@@ -2193,8 +2194,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "8625832270251865723"
+              "version": "0.43.1.21952",
+              "templateHash": "18165791034455500810"
             }
           },
           "parameters": {
@@ -2292,8 +2293,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "86820201133730094"
+              "version": "0.43.1.21952",
+              "templateHash": "5594268495465696493"
             }
           },
           "parameters": {
@@ -2345,8 +2346,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "86820201133730094"
+              "version": "0.43.1.21952",
+              "templateHash": "5594268495465696493"
             }
           },
           "parameters": {
@@ -2425,8 +2426,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "3118100348333082846"
+              "version": "0.43.1.21952",
+              "templateHash": "17909283169725682297"
             }
           },
           "parameters": {
@@ -2553,8 +2554,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "9298492653220526659"
+              "version": "0.43.1.21952",
+              "templateHash": "12047917621741387866"
             }
           },
           "parameters": {
@@ -2648,8 +2649,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "6689444062125257300"
+                      "version": "0.43.1.21952",
+                      "templateHash": "5819874238275509513"
                     }
                   },
                   "parameters": {
@@ -2752,8 +2753,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12681009794444958319"
+              "version": "0.43.1.21952",
+              "templateHash": "1620589444262155896"
             }
           },
           "parameters": {
@@ -2819,8 +2820,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12359681518912746374"
+              "version": "0.43.1.21952",
+              "templateHash": "5172805683994692433"
             }
           },
           "parameters": {
@@ -2890,8 +2891,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12359681518912746374"
+              "version": "0.43.1.21952",
+              "templateHash": "5172805683994692433"
             }
           },
           "parameters": {
@@ -2961,8 +2962,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12359681518912746374"
+              "version": "0.43.1.21952",
+              "templateHash": "5172805683994692433"
             }
           },
           "parameters": {
@@ -3034,8 +3035,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12409465377820738271"
+              "version": "0.43.1.21952",
+              "templateHash": "4673141357592491689"
             }
           },
           "parameters": {
@@ -3100,8 +3101,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12359681518912746374"
+              "version": "0.43.1.21952",
+              "templateHash": "5172805683994692433"
             }
           },
           "parameters": {
@@ -3170,8 +3171,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "12359681518912746374"
+              "version": "0.43.1.21952",
+              "templateHash": "5172805683994692433"
             }
           },
           "parameters": {
@@ -3259,8 +3260,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "3118100348333082846"
+              "version": "0.43.1.21952",
+              "templateHash": "17909283169725682297"
             }
           },
           "parameters": {
@@ -3417,8 +3418,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "9418380257143177483"
+              "version": "0.43.1.21952",
+              "templateHash": "8512132208529684411"
             }
           },
           "functions": [
@@ -3706,8 +3707,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "9825207426800910322"
+                      "version": "0.43.1.21952",
+                      "templateHash": "10913862644482128014"
                     }
                   },
                   "parameters": {
@@ -3794,8 +3795,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "12359681518912746374"
+                      "version": "0.43.1.21952",
+                      "templateHash": "5172805683994692433"
                     }
                   },
                   "parameters": {
@@ -3888,8 +3889,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "3118100348333082846"
+                      "version": "0.43.1.21952",
+                      "templateHash": "17909283169725682297"
                     }
                   },
                   "parameters": {
@@ -4028,8 +4029,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "7572384739263473460"
+                      "version": "0.43.1.21952",
+                      "templateHash": "13212895679075883997"
                     }
                   },
                   "parameters": {
@@ -4173,8 +4174,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.42.1.51946",
-                              "templateHash": "3118100348333082846"
+                              "version": "0.43.1.21952",
+                              "templateHash": "17909283169725682297"
                             }
                           },
                           "parameters": {
@@ -4337,8 +4338,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "5885410954838496128"
+              "version": "0.43.1.21952",
+              "templateHash": "17791388946861865932"
             }
           },
           "parameters": {
@@ -4428,8 +4429,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "12359681518912746374"
+                      "version": "0.43.1.21952",
+                      "templateHash": "5172805683994692433"
                     }
                   },
                   "parameters": {
@@ -4535,8 +4536,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "3053374634729465931"
+              "version": "0.43.1.21952",
+              "templateHash": "16900969796440494140"
             }
           },
           "definitions": {
@@ -4782,8 +4783,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "9132222173859342255"
+                      "version": "0.43.1.21952",
+                      "templateHash": "18059231652493247581"
                     }
                   },
                   "parameters": {
@@ -4968,8 +4969,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "12230315507535629411"
+                      "version": "0.43.1.21952",
+                      "templateHash": "10052556287372613628"
                     }
                   },
                   "parameters": {
@@ -5066,8 +5067,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "11830002957142007049"
+                      "version": "0.43.1.21952",
+                      "templateHash": "7055867175060989044"
                     }
                   },
                   "parameters": {
@@ -5191,8 +5192,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "11830002957142007049"
+                      "version": "0.43.1.21952",
+                      "templateHash": "7055867175060989044"
                     }
                   },
                   "parameters": {
@@ -5313,8 +5314,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "8855883745837603860"
+                      "version": "0.43.1.21952",
+                      "templateHash": "9942496510612367249"
                     }
                   },
                   "parameters": {
@@ -5423,8 +5424,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.42.1.51946",
-                      "templateHash": "8855883745837603860"
+                      "version": "0.43.1.21952",
+                      "templateHash": "9942496510612367249"
                     }
                   },
                   "parameters": {
@@ -5503,7 +5504,6 @@
       ]
     },
     "kustoPipelineDeploymentScript": {
-      "condition": "[parameters('enableKustoCluster')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "[__bicep.getSafeDeploymentName(format('{0}-kustoloadpipeline-deployment', variables('synapseWorkspaceName')))]",
@@ -5554,8 +5554,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.42.1.51946",
-              "templateHash": "3118100348333082846"
+              "version": "0.43.1.21952",
+              "templateHash": "17909283169725682297"
             }
           },
           "parameters": {
@@ -5643,7 +5643,6 @@
         }
       },
       "dependsOn": [
-        "kustoModules",
         "synapseWS",
         "userAssignedMI"
       ]
