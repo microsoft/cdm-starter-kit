@@ -171,7 +171,8 @@
                                     "Prices",
                                     "Benefits",
                                     "Products",
-                                    "Cloud Dimensions"
+                                    "Cloud Dimensions",
+                                    "Accounts"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
@@ -194,6 +195,10 @@
                                         {
                                             "label": "Cloud Dimensions",
                                             "value": "CloudDimensions"
+                                        },
+                                        {
+                                            "label": "Accounts",
+                                            "value": "Accounts"
                                         }
                                     ],
                                     "required": true
@@ -254,13 +259,28 @@
                                 "multiselect": true,
                                 "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Benefits')]",
                                 "defaultValue": [
-                                    "CDM_Benefits_Amortization"
+                                    "CDM_Benefits_Amortization",
+                                    "CDM_Benefits_BalanceSummary",
+                                    "CDM_Benefits_BalanceContributionCharge",
+                                    "CDM_Benefits_BalanceContingency"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
                                         {
                                             "label": "CDM_Benefits_Amortization",
                                             "value": "CDM_Benefits_Amortization"
+                                        },
+                                        {
+                                            "label": "CDM_Benefits_BalanceSummary",
+                                            "value": "CDM_Benefits_BalanceSummary"
+                                        },
+                                        {
+                                            "label": "CDM_Benefits_BalanceContributionCharge",
+                                            "value": "CDM_Benefits_BalanceContributionCharge"
+                                        },
+                                        {
+                                            "label": "CDM_Benefits_BalanceContingency",
+                                            "value": "CDM_Benefits_BalanceContingency"
                                         }
                                     ],
                                     "required": true
@@ -301,6 +321,36 @@
                                         {
                                             "label": "CDM_ExchangeRates",
                                             "value": "CDM_ExchangeRates"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            },
+                            {
+                                "name": "datasets_Accounts",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Accounts Datasets",
+                                "toolTip": "Accounts unifies Microsoft commerce account hierarchy for both MCA and EA into canonical data model schemas, BillingAccounts, BillingProfiles, and InvoiceSections. The data models are inspired by ARM contract with additional attributes to serve Microsoft operator cloud needs.",
+                                "multiselect": true,
+                                "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Accounts')]",
+                                "defaultValue": [
+                                    "CDM_InvoiceSections",
+                                    "CDM_BillingAccounts",
+                                    "CDM_BillingProfiles"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "CDM_InvoiceSections",
+                                            "value": "CDM_InvoiceSections"
+                                        },
+                                        {
+                                            "label": "CDM_BillingAccounts",
+                                            "value": "CDM_BillingAccounts"
+                                        },
+                                        {
+                                            "label": "CDM_BillingProfiles",
+                                            "value": "CDM_BillingProfiles"
                                         }
                                     ],
                                     "required": true
@@ -518,7 +568,8 @@
                 "datasets_Prices": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Prices'), steps('dataProductsOptions').datasetSelectionSection.datasets_Prices, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
                 "datasets_Products": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Products'), steps('dataProductsOptions').datasetSelectionSection.datasets_Products, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
                 "datasets_Benefits": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Benefits'), steps('dataProductsOptions').datasetSelectionSection.datasets_Benefits, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
-                "datasets_CloudDimensions": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'CloudDimensions'), steps('dataProductsOptions').datasetSelectionSection.datasets_CloudDimensions, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]"
+                "datasets_CloudDimensions": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'CloudDimensions'), steps('dataProductsOptions').datasetSelectionSection.datasets_CloudDimensions, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
+                "datasets_Accounts": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Accounts'), steps('dataProductsOptions').datasetSelectionSection.datasets_Accounts, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]"
             },
             "enableKustoCluster": "[steps('computeConfigurations').enableKustoCluster]",
             "kustoClusterSku": "[if(steps('computeConfigurations').kustoConfigurations.kustoSkuNotInList, steps('computeConfigurations').kustoConfigurations.kustoClusterSkuManual, steps('computeConfigurations').kustoConfigurations.kustoClusterSku)]",
