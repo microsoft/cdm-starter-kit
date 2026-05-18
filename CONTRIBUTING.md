@@ -64,14 +64,14 @@ See [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md) for our
 
 ❌ Microsoft internal code or proprietary assets
 ❌ Secrets, credentials, or sensitive configuration
-❌ Tenant-specific or customer-identifying information
+❌ Tenant-specific or identifying information
 ❌ Code designed for Microsoft internal environments
 ❌ Changes requiring Microsoft internal dependencies
 
 ## Important Notes
 
 - **No SLA or Production Support**: This is a community project, not a Microsoft service. Contributions and responses are provided on a best-effort basis.
-- **Reference Architecture**: This is a starter kit and reference implementation. Production deployments require customer validation and additional controls.
+- **Reference Architecture**: This is a starter kit and reference implementation. Production deployments require additional validation and controls by the deploying organization.
 - **Your Responsibility**: When you deploy resources, you are responsible for their security, compliance, and operational management.
 
 ## Licensing
