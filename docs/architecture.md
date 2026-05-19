@@ -2,94 +2,55 @@
 
 ## High-Level Design
 
-This starter kit provides Infrastructure-as-Code templates to deploy a foundational CDM Starter Kit infrastructure stack on Azure. It is designed as a **customer-deployed reference architecture** on customer-owned Azure subscriptions.
+This starter kit provides Infrastructure-as-Code templates to deploy a foundational analytics stack on Azure. It is a **consumer-deployed reference architecture** intended to run in the data consumer's own Azure subscription.
 
 ## Core Principles
 
-### 1. Infrastructure-as-Code (Bicep)
+### Infrastructure-as-Code (Bicep)
 
 All infrastructure is declared using Azure Bicep:
 
-- **Version-controlled** - All configurations tracked in Git
-- **Repeatable** - Consistent, idempotent deployments
-- **Parameterized** - Customer-supplied values at deployment time
-- **Modular** - Components organized for reusability and maintainability
+- Version-controlled, repeatable, idempotent deployments
+- Parameterized so values are supplied at deploy time
+- Modular components for reuse and maintainability
 
-### 2. Customer-Owned Identity & Access
+### Consumer-Owned Identity & Access
 
-- **RBAC-First**: Role-based access control is the foundation
-- **No Service Accounts**: Customers manage all identities
-- **Least Privilege**: RBAC scaffolding supports principled access assignment
-- **Customer-Controlled**: All access decisions made by deploying organization
+- RBAC-first access model
+- All identities and role assignments are managed by the deploying organization
+- Least-privilege role mappings are surfaced as parameters, not embedded
 
-### 3. No Microsoft-Managed Runtime
+### No Microsoft-Managed Runtime
 
-This architecture does NOT provision:
+This architecture does **not** provision:
 
-- ❌ Microsoft-hosted services on behalf of the customer
-- ❌ First-party production infrastructure
-- ❌ Long-running Microsoft managed processes
-- ❌ Internal authentication or tenant-scoped components
+- Microsoft-hosted services on the consumer's behalf
+- First-party production infrastructure
+- Long-running Microsoft-managed processes
+- Internal authentication or tenant-scoped components
 
-Instead, it deploys **standard Azure customer-owned resources** that the organization operates directly.
+It deploys **standard Azure resources** that the data consumer operates directly.
 
 ## Infrastructure Components
 
-### 1. Azure Storage
+| Component | Purpose |
+| --- | --- |
+| Azure Storage | Foundation data storage layer |
+| Azure Data Explorer (Kusto/ADX) | Analytics and telemetry ingestion |
+| Azure Synapse Analytics | Data warehousing and processing |
+| RBAC scaffolding | Parameterized role assignments for users and service principals |
 
-**Purpose**: Foundation data storage layer
-
-- Supports data lakes, backups, and artifact repositories
-- RBAC configured by customer for multi-user access
-- Diagnostic data and logs stored securely
-- Network access restricted via SAS/RBAC policies
-
-**Customer Responsibility**: Configure lifecycle policies, network security, data retention
-
-### 2. Azure Data Explorer (Kusto/ADX)
-
-**Purpose**: High-performance analytics and telemetry ingestion
-
-- Time-series data analysis and exploration
-- Real-time dashboard and alerting capabilities
-- Data aggregation
-- Query-based insights and reporting
-
-**Customer Responsibility**: Query optimization, data retention policies, cluster sizing
-
-### 3. Azure Synapse Analytics
-
-**Purpose**: Data warehousing, ELT/ETL, and advanced analytics
-
-- Structured data warehouse for BI and reporting
-- SQL and Spark pools for processing
-- Integration with Power BI for visualization
-- Cost and resource optimization analysis
-
-**Customer Responsibility**: Workload tuning, compute scaling, metadata management
-
-### 4. RBAC Scaffolding
-
-**Purpose**: Principled access control foundation
-
-- Role assignments for service principals and users
-- Audit-ready access management
-
-**Customer Responsibility**: Assigning actual users/services, ongoing access reviews
+Configuration of lifecycle, network security, retention, scaling, and ongoing access reviews is the responsibility of the deploying organization.
 
 ## Deployment Flow
 
 ### Option 1: Azure Portal (CreateUIDefinition)
 
-1. Customer opens **Create** → Search "CDM Starter Kit"
-2. Guided form captures:
-   - Subscription and resource group
-   - Resource naming conventions
-   - Compliance/regulatory tags
-3. One-click deployment
-4. Resources created in customer's subscription
+1. Open **Create** in the Azure Portal and search for "CDM Starter Kit".
+2. The guided form captures subscription, resource group, naming conventions, and tags.
+3. Submit to deploy resources into your own subscription.
 
-### Option 2: Infrastructure-as-Code (Bicep CLI)
+### Option 2: Bicep CLI
 
 ```bash
 az deployment group create \
@@ -102,63 +63,17 @@ Both paths produce identical resource configurations.
 
 ## Security Boundaries
 
-### What Is Secure
+What the template provides out of the box:
 
-✅ Customer controls all identities (AAD users, service principals)
-✅ Customer controls RBAC and permissions
-✅ Data is encrypted at rest and in transit (Azure defaults)
-✅ Audit logs are captured and retained
-✅ Network access is configurable via NSGs
+- Encryption at rest and in transit (Azure defaults)
+- Audit-log capture on supported resources
+- Configurable network access via NSGs and resource firewalls
 
-### What Requires Customer Hardening
+What you need to harden yourself:
 
-⚠️ Network security policies (firewalls, private endpoints, NSGs)
-⚠️ Identity federation and conditional access policies
-⚠️ Data retention and compliance scoping
-⚠️ Backup and disaster recovery strategies
-⚠️ Monitoring and alerting configuration
+- Network policies (private endpoints, firewall rules, NSG tuning)
+- Identity assignments (AAD users, groups, service principals)
+- Data retention, lifecycle, and backup policies
+- Workload-specific compliance controls
 
-### What Is NOT Secured
-
-❌ This architecture does not include:
-- Multi-tenant isolation (customer-owned resources only)
-- Advanced threat detection (customer enablement required)
-- Compliance automation (customer responsibility)
-- Secrets/credentials management (customer's Azure Key Vault)
-
-## Operational Responsibility Model
-
-| Component | Deployed | Managed | Secured |
-|-----------|----------|---------|---------|
-| Azure Storage | Starter Kit | Customer | Customer |
-| Data Explorer | Starter Kit | Customer | Customer |
-| Synapse | Starter Kit | Customer | Customer |
-| RBAC Foundation | Starter Kit | Customer | Customer |
-| VNets / NSGs | Starter Kit | Customer | Customer |
-| Credentials | Customer | Customer | Customer |
-| Access Reviews | - | Customer | Customer |
-| Monitoring/Alerting | Starter Kit | Customer | Customer |
-
-**Summary**: This kit provides the **infrastructure template**. Customers are responsible for **deployment configuration, operational management, and security hardening**.
-
-## Scaling & Customization
-
-The starter kit is designed for easy customization:
-
-- **SKU Flexibility**: Bicep parameters support resource sizing
-- **Regional Deployment**: Works across Azure regions
-- **Tagging Strategy**: Customer-defined tag schemas (TBD)
-- **Module Reusability**: Components can be extended or replaced
-- **Integration**: Designed to connect with existing Azure infrastructure
-
-## Compliance & Governance
-
-- **Audit Logging**: All deployments and access logged to Activity Log
-- **Blueprint Support**: Can be packaged as Azure Blueprint
-- **Policy-Compatible**: Works with Azure Policy for governance
-- **Tagging**: Supports cost allocation and compliance tagging (TBD)
-- **Documentation**: Clear parameter descriptions for compliance review
-
----
-
-**Key Takeaway**: This is a **reference architecture starter kit**, not a production service. Customers deploy, operate, and secure the infrastructure. Microsoft provides the template and examples.
+See [extending-the-starter-kit.md](./extending-the-starter-kit.md) for patterns to adapt the kit to other target databases or runtimes.

@@ -30,7 +30,7 @@ We will acknowledge receipt of your report and work to assess and address the vu
 
 - ❌ **No secrets, API keys, or connection strings**
 - ❌ **No credentials, certificate files, or private keys**
-- ❌ **No Microsoft tenant IDs or customer subscription IDs**
+- ❌ **No tenant IDs or subscription IDs**
 - ❌ **No service principal credentials or managed identities**
 - ❌ **No hardcoded authentication tokens or SAS keys**
 
@@ -45,7 +45,7 @@ We will acknowledge receipt of your report and work to assess and address the vu
 
 This is a **reference architecture / starter kit**, not a production service.
 
-**Customers are responsible for:**
+**Data consumers are responsible for:**
 - ✅ Deploying into their own Azure subscriptions
 - ✅ Configuring appropriate RBAC and access controls
 - ✅ Implementing network security policies for their environments
@@ -54,10 +54,10 @@ This is a **reference architecture / starter kit**, not a production service.
 - ✅ Maintaining compliance with their own organizational policies
 
 **This repository is not responsible for:**
-- ❌ Customer execution environments or Azure tenants
-- ❌ Customer-supplied credentials or secrets
+- ❌ Consumer execution environments or Azure tenants
+- ❌ Consumer-supplied credentials or secrets
 - ❌ Ongoing operational security of deployed infrastructure
-- ❌ Compliance with customer-specific security policies
+- ❌ Compliance with consumer-specific security policies
 
 ## Dependency Management
 

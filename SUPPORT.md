@@ -2,7 +2,7 @@
 
 ## Scope
 
-CDM Starter Kit is an open-source infrastructure starter kit for Azure customers and partners. This repository is **not** a Microsoft service and does not include SLA-backed production support.
+CDM Starter Kit is an open-source infrastructure starter kit for data consumers running workloads in their own Azure subscriptions. This repository is **not** a Microsoft service and does not include SLA-backed production support.
 
 ## How to Get Help
 
@@ -39,14 +39,14 @@ Follow `SECURITY.md` and report privately to the security contact listed there.
 
 ## What Is Out of Scope
 
-- Customer-specific production operations
+- Consumer-specific production operations
 - Tenant-specific deployment customization requests
 - Emergency/on-call support
 - Requests requiring internal Microsoft systems
 
 ## Responsible Use
 
-- Deploy only to customer-owned Azure subscriptions
+- Deploy only to Azure subscriptions you own
 - Do not commit secrets, credentials, tenant IDs, or subscription IDs
 - Validate changes with Bicep linting and PR checks before merge
 

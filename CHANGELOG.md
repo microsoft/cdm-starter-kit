@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Reworded public docs to refer to "data consumers" instead of "customers" to better describe the intended audience of this public repository.
+- Slimmed `docs/architecture.md` and `docs/faq.md` to keep only generic starter-kit guidance; removed deeper operator-specific content that lives in the internal platform repo.
+- Trimmed `docs/consumer-ingestion-guide.md` to focus on the manifest, index-file, and checkpointing contracts; removed references to internal platform pipeline names.
+
+### Added
+- `docs/extending-the-starter-kit.md` covering target-database substitution patterns (Fabric, SQL, Snowflake), extracted from the previous ingestion guide.
+
+### Removed
+- `docs/implementation-checklist.md` (internal operator checklist; relocated to the internal platform repo).
+
 ### Added
 - Initial open-source release setup
 - Microsoft OSS-compliant repository structure
