@@ -172,7 +172,8 @@
                                     "Benefits",
                                     "Products",
                                     "Cloud Dimensions",
-                                    "Accounts"
+                                    "Accounts",
+                                    "Subscriptions"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
@@ -199,6 +200,10 @@
                                         {
                                             "label": "Accounts",
                                             "value": "Accounts"
+                                        },
+                                        {
+                                            "label": "Subscriptions",
+                                            "value": "Subscriptions"
                                         }
                                     ],
                                     "required": true
@@ -351,6 +356,31 @@
                                         {
                                             "label": "CDM_BillingProfiles",
                                             "value": "CDM_BillingProfiles"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            },
+                            {
+                                "name": "datasets_Subscriptions",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Subscriptions Datasets",
+                                "toolTip": "Subscriptions captures the lifecycle and identity of Microsoft customer subscriptions and their billing-subscription mappings. It supports renewal analysis, entitlement reconciliation, and revenue attribution downstream.",
+                                "multiselect": true,
+                                "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Subscriptions')]",
+                                "defaultValue": [
+                                    "CDM_BillingSubscriptions",
+                                    "CDM_Subscriptions"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "CDM_BillingSubscriptions",
+                                            "value": "CDM_BillingSubscriptions"
+                                        },
+                                        {
+                                            "label": "CDM_Subscriptions",
+                                            "value": "CDM_Subscriptions"
                                         }
                                     ],
                                     "required": true
@@ -569,7 +599,8 @@
                 "datasets_Products": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Products'), steps('dataProductsOptions').datasetSelectionSection.datasets_Products, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
                 "datasets_Benefits": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Benefits'), steps('dataProductsOptions').datasetSelectionSection.datasets_Benefits, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
                 "datasets_CloudDimensions": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'CloudDimensions'), steps('dataProductsOptions').datasetSelectionSection.datasets_CloudDimensions, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
-                "datasets_Accounts": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Accounts'), steps('dataProductsOptions').datasetSelectionSection.datasets_Accounts, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]"
+                "datasets_Accounts": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Accounts'), steps('dataProductsOptions').datasetSelectionSection.datasets_Accounts, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
+                "datasets_Subscriptions": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Subscriptions'), steps('dataProductsOptions').datasetSelectionSection.datasets_Subscriptions, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]"
             },
             "enableKustoCluster": "[steps('computeConfigurations').enableKustoCluster]",
             "kustoClusterSku": "[if(steps('computeConfigurations').kustoConfigurations.kustoSkuNotInList, steps('computeConfigurations').kustoConfigurations.kustoClusterSkuManual, steps('computeConfigurations').kustoConfigurations.kustoClusterSku)]",
