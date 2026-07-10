@@ -5,8 +5,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.43.8.12551",
-      "templateHash": "9866717806708941746"
+      "version": "0.44.1.10279",
+      "templateHash": "16710833564136016756"
     }
   },
   "functions": [
@@ -121,7 +121,8 @@
         "Products",
         "Benefits",
         "CloudDimensions",
-        "Accounts"
+        "Accounts",
+        "Subscriptions"
       ]
     },
     "datasetsToDeploy": {
@@ -149,6 +150,10 @@
           "CDM_InvoiceSections",
           "CDM_BillingAccounts",
           "CDM_BillingProfiles"
+        ],
+        "datasets_Subscriptions": [
+          "CDM_BillingSubscriptions",
+          "CDM_Subscriptions"
         ]
       }
     },
@@ -232,6 +237,11 @@
         "input": "[format('CD{0}', padLeft(format('{0}', add(range(0, if(variables('hasCloudDimensions'), variables('dimensionMap').cloudDimensions, 0))[copyIndex('cloudDimensionsIndexes')], 1)), 2, '0'))]"
       },
       {
+        "name": "subscriptionIndexes",
+        "count": "[length(range(0, if(variables('hasSubscriptions'), variables('dimensionMap').subscriptions, 0)))]",
+        "input": "[format('SU{0}', padLeft(format('{0}', add(range(0, if(variables('hasSubscriptions'), variables('dimensionMap').subscriptions, 0))[copyIndex('subscriptionIndexes')], 1)), 2, '0'))]"
+      },
+      {
         "name": "storageAccountNames",
         "count": "[length(variables('allIndexes'))]",
         "input": "[toLower(format('{0}{1}', variables('storageAccountBaseName'), variables('allIndexes')[copyIndex('storageAccountNames')]))]"
@@ -265,6 +275,11 @@
         "name": "cloudDimensionStorageAccounts",
         "count": "[length(variables('cloudDimensionsIndexes'))]",
         "input": "[toLower(format('{0}{1}', variables('storageAccountBaseName'), variables('cloudDimensionsIndexes')[copyIndex('cloudDimensionStorageAccounts')]))]"
+      },
+      {
+        "name": "subscriptionStorageAccounts",
+        "count": "[length(variables('subscriptionIndexes'))]",
+        "input": "[toLower(format('{0}{1}', variables('storageAccountBaseName'), variables('subscriptionIndexes')[copyIndex('subscriptionStorageAccounts')]))]"
       },
       {
         "name": "publicStorageAccounts",
@@ -1583,6 +1598,7 @@
             }
           }
         ],
+        "concurrency": 1,
         "parameters": {
           "SubscriptionCatalaogFilePath": {
             "type": "string",
@@ -1787,6 +1803,41 @@
               "name": "CDM_BillingProfiles",
               "version": "3.0",
               "sub_path": "/v3"
+            },
+            {
+              "name": "CDM_Departments",
+              "version": "3.0",
+              "sub_path": "/v3"
+            },
+            {
+              "name": "CDM_EnrollmentAccounts",
+              "version": "3.0",
+              "sub_path": "/v3"
+            }
+          ]
+        },
+        {
+          "name": "Subscriptions",
+          "scenario_description": "Customer subscription lifecycle and billing-subscription mappings. Supports renewal forecasting, churn analysis, and entitlement reconciliation.",
+          "enabled": true,
+          "output_configuration": {
+            "storage_account": "<primarySAForSU>",
+            "container": "data",
+            "base_path": "/commerce-data-model/subscriptions/",
+            "additional_storage_accounts": [
+              "<secondarySAsForSU>"
+            ]
+          },
+          "tables": [
+            {
+              "name": "CDM_BillingSubscriptions",
+              "version": "3.0",
+              "sub_path": "/v3"
+            },
+            {
+              "name": "CDM_Subscriptions",
+              "version": "3.0",
+              "sub_path": "/v3"
             }
           ]
         }
@@ -1840,7 +1891,8 @@
       "products": 2,
       "benefits": 2,
       "accounts": 2,
-      "cloudDimensions": 2
+      "cloudDimensions": 2,
+      "subscriptions": 2
     },
     "hasCharges": "[contains(variables('dataProductsLower'), 'charges')]",
     "hasPrices": "[contains(variables('dataProductsLower'), 'prices')]",
@@ -1848,7 +1900,8 @@
     "hasBenefits": "[contains(variables('dataProductsLower'), 'benefits')]",
     "hasAccounts": "[contains(variables('dataProductsLower'), 'accounts')]",
     "hasCloudDimensions": "[contains(variables('dataProductsLower'), 'clouddimensions')]",
-    "allIndexes": "[concat(variables('chargeIndexes'), variables('priceIndexes'), variables('productIndexes'), variables('benefitsIndexes'), variables('accountIndexes'), variables('cloudDimensionsIndexes'))]",
+    "hasSubscriptions": "[contains(variables('dataProductsLower'), 'subscriptions')]",
+    "allIndexes": "[concat(variables('chargeIndexes'), variables('priceIndexes'), variables('productIndexes'), variables('benefitsIndexes'), variables('accountIndexes'), variables('cloudDimensionsIndexes'), variables('subscriptionIndexes'))]",
     "storageAccountBaseName": "[toLower(format('{0}sa{1}', parameters('instanceName'), variables('regionShortMap')[variables('location')]))]",
     "storageAccountMap": {
       "Charges": "[variables('chargeStorageAccounts')]",
@@ -1856,7 +1909,8 @@
       "Products": "[variables('productStorageAccounts')]",
       "Benefits": "[variables('benefitsStorageAccounts')]",
       "Accounts": "[variables('accountStorageAccounts')]",
-      "CloudDimensions": "[variables('cloudDimensionStorageAccounts')]"
+      "CloudDimensions": "[variables('cloudDimensionStorageAccounts')]",
+      "Subscriptions": "[variables('subscriptionStorageAccounts')]"
     },
     "pwshParams": {
       "subscriptionId": "[variables('subscriptionId')]",
@@ -1907,6 +1961,8 @@
       ]
     },
     "kustoDatabaseViewers": "[variables('kustoDatabaseViewerPermissions').systemAdmins]",
+    "kustoCalloutUriRegex": ".*",
+    "kustoCalloutPolicyJson": "[format('[{{\"CalloutType\":\"kusto\",\"CalloutUriRegex\":\"{0}\",\"CanCall\":true}}]', variables('kustoCalloutUriRegex'))]",
     "_1.environmentSuffixMap": {
       "storage": "[environment().suffixes.storage]",
       "acrLoginServer": "[environment().suffixes.acrLoginServer]",
@@ -1946,8 +2002,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "2639875794559268485"
+              "version": "0.44.1.10279",
+              "templateHash": "17906530009566172033"
             }
           },
           "parameters": {
@@ -2009,8 +2065,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "6132917863189881191"
+              "version": "0.44.1.10279",
+              "templateHash": "16845536896990899711"
             }
           },
           "parameters": {
@@ -2084,8 +2140,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "8185377227881362028"
+              "version": "0.44.1.10279",
+              "templateHash": "13204243892335445100"
             }
           },
           "parameters": {
@@ -2188,8 +2244,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9681323236165023980"
+              "version": "0.44.1.10279",
+              "templateHash": "9852673600241109788"
             }
           },
           "parameters": {
@@ -2250,8 +2306,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "8185377227881362028"
+              "version": "0.44.1.10279",
+              "templateHash": "13204243892335445100"
             }
           },
           "parameters": {
@@ -2349,8 +2405,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9681323236165023980"
+              "version": "0.44.1.10279",
+              "templateHash": "9852673600241109788"
             }
           },
           "parameters": {
@@ -2402,8 +2458,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9681323236165023980"
+              "version": "0.44.1.10279",
+              "templateHash": "9852673600241109788"
             }
           },
           "parameters": {
@@ -2482,8 +2538,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9879112902476063819"
+              "version": "0.44.1.10279",
+              "templateHash": "4583673213472679312"
             }
           },
           "parameters": {
@@ -2610,8 +2666,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9713655225053748590"
+              "version": "0.44.1.10279",
+              "templateHash": "1102260118831337495"
             }
           },
           "parameters": {
@@ -2705,8 +2761,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "7515521011829199633"
+                      "version": "0.44.1.10279",
+                      "templateHash": "6257918881171089017"
                     }
                   },
                   "parameters": {
@@ -2809,8 +2865,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "17630082791767948418"
+              "version": "0.44.1.10279",
+              "templateHash": "2421012368216532404"
             }
           },
           "parameters": {
@@ -2876,8 +2932,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "5388846197397218835"
+              "version": "0.44.1.10279",
+              "templateHash": "4827445391336894813"
             }
           },
           "parameters": {
@@ -2947,8 +3003,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "5388846197397218835"
+              "version": "0.44.1.10279",
+              "templateHash": "4827445391336894813"
             }
           },
           "parameters": {
@@ -3018,8 +3074,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "5388846197397218835"
+              "version": "0.44.1.10279",
+              "templateHash": "4827445391336894813"
             }
           },
           "parameters": {
@@ -3091,8 +3147,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "2639875794559268485"
+              "version": "0.44.1.10279",
+              "templateHash": "17906530009566172033"
             }
           },
           "parameters": {
@@ -3157,8 +3213,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "5388846197397218835"
+              "version": "0.44.1.10279",
+              "templateHash": "4827445391336894813"
             }
           },
           "parameters": {
@@ -3227,8 +3283,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "5388846197397218835"
+              "version": "0.44.1.10279",
+              "templateHash": "4827445391336894813"
             }
           },
           "parameters": {
@@ -3316,8 +3372,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9879112902476063819"
+              "version": "0.44.1.10279",
+              "templateHash": "4583673213472679312"
             }
           },
           "parameters": {
@@ -3474,8 +3530,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "1122490708976169223"
+              "version": "0.44.1.10279",
+              "templateHash": "6408316354695612876"
             }
           },
           "functions": [
@@ -3763,8 +3819,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "17371919521253230038"
+                      "version": "0.44.1.10279",
+                      "templateHash": "18444294611436477280"
                     }
                   },
                   "parameters": {
@@ -3851,8 +3907,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "5388846197397218835"
+                      "version": "0.44.1.10279",
+                      "templateHash": "4827445391336894813"
                     }
                   },
                   "parameters": {
@@ -3945,8 +4001,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "9879112902476063819"
+                      "version": "0.44.1.10279",
+                      "templateHash": "4583673213472679312"
                     }
                   },
                   "parameters": {
@@ -4085,8 +4141,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "13327507640906252033"
+                      "version": "0.44.1.10279",
+                      "templateHash": "4667660185517362397"
                     }
                   },
                   "parameters": {
@@ -4230,8 +4286,8 @@
                           "metadata": {
                             "_generator": {
                               "name": "bicep",
-                              "version": "0.43.8.12551",
-                              "templateHash": "9879112902476063819"
+                              "version": "0.44.1.10279",
+                              "templateHash": "4583673213472679312"
                             }
                           },
                           "parameters": {
@@ -4394,8 +4450,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "13945643682948975417"
+              "version": "0.44.1.10279",
+              "templateHash": "15075395740201644281"
             }
           },
           "parameters": {
@@ -4485,8 +4541,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "5388846197397218835"
+                      "version": "0.44.1.10279",
+                      "templateHash": "4827445391336894813"
                     }
                   },
                   "parameters": {
@@ -4583,6 +4639,15 @@
           },
           "complianceMonitoringSpnAppId": {
             "value": "[parameters('complianceMonitoringSpnAppId')]"
+          },
+          "calloutPolicy": {
+            "value": "[variables('kustoCalloutPolicyJson')]"
+          },
+          "calloutPolicyUamiResourceId": {
+            "value": "[reference('userAssignedMI').outputs.userAssignedMIId.value]"
+          },
+          "calloutPolicyUamiPrincipalId": {
+            "value": "[reference('userAssignedMI').outputs.principalId.value]"
           }
         },
         "template": {
@@ -4592,8 +4657,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "5953217172758409973"
+              "version": "0.44.1.10279",
+              "templateHash": "2640098019520256048"
             }
           },
           "definitions": {
@@ -4787,6 +4852,34 @@
               "metadata": {
                 "description": "Compliance Monitoring SPN Application (Client) ID for SOX Kusto cluster monitoring"
               }
+            },
+            "calloutPolicy": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Kusto callout policy JSON array string. Passed through to kusto_cluster.bicep. Empty string preserves defaults."
+              }
+            },
+            "allowedFqdnList": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "List of allowed FQDNs for egress from the Kusto cluster. Passed through to kusto_cluster.bicep."
+              }
+            },
+            "calloutPolicyUamiResourceId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of an EXISTING User Assigned Managed Identity to use for the callout-policy deployment script. Required when calloutPolicy is non-empty. Typically the wrapper UAMI created in finops.bicep so we avoid creating a second identity."
+              }
+            },
+            "calloutPolicyUamiPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Principal (object) ID of the same UAMI referenced by calloutPolicyUamiResourceId. Required when calloutPolicy is non-empty. Used to grant AllDatabasesAdmin on the cluster so the deployment script can run cluster-scoped admin commands."
+              }
             }
           },
           "variables": {
@@ -4831,6 +4924,9 @@
                   },
                   "tags": {
                     "value": "[variables('kustoTags')]"
+                  },
+                  "allowedFqdnList": {
+                    "value": "[parameters('allowedFqdnList')]"
                   }
                 },
                 "template": {
@@ -4839,8 +4935,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "4652477658965378271"
+                      "version": "0.44.1.10279",
+                      "templateHash": "14685762150316106810"
                     }
                   },
                   "parameters": {
@@ -4914,7 +5010,7 @@
                       "type": "array",
                       "defaultValue": [],
                       "metadata": {
-                        "description": "List of allowed FQDNs(Fully Qualified Domain Name) for egress from Cluster"
+                        "description": "List of allowed FQDNs (Fully Qualified Domain Name) for egress from the Kusto cluster. Azure does NOT accept wildcards in this list — only concrete FQDNs (e.g., \"cluster.eastus.kusto.windows.net\"). Leave empty to disable the FQDN egress restriction entirely (restrictOutboundNetworkAccess will be Disabled); supply explicit FQDNs to lock egress down (restrictOutboundNetworkAccess will be Enabled)."
                       }
                     },
                     "userAssignedIdentities": {
@@ -4970,7 +5066,7 @@
                         "enableDoubleEncryption": false,
                         "engineType": "[parameters('engineType')]",
                         "acceptedAudiences": [],
-                        "restrictOutboundNetworkAccess": "Enabled",
+                        "restrictOutboundNetworkAccess": "[if(empty(parameters('allowedFqdnList')), 'Disabled', 'Enabled')]",
                         "allowedFqdnList": "[parameters('allowedFqdnList')]",
                         "publicNetworkAccess": "[parameters('publicNetworkAccess')]",
                         "allowedIpRangeList": [],
@@ -5025,8 +5121,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "5433190119306689489"
+                      "version": "0.44.1.10279",
+                      "templateHash": "17618000142406797934"
                     }
                   },
                   "parameters": {
@@ -5123,8 +5219,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "7342501761411127539"
+                      "version": "0.44.1.10279",
+                      "templateHash": "10691039031481088182"
                     }
                   },
                   "parameters": {
@@ -5248,8 +5344,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "7342501761411127539"
+                      "version": "0.44.1.10279",
+                      "templateHash": "10691039031481088182"
                     }
                   },
                   "parameters": {
@@ -5370,8 +5466,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "4682424534670987653"
+                      "version": "0.44.1.10279",
+                      "templateHash": "7375986583220396510"
                     }
                   },
                   "parameters": {
@@ -5480,8 +5576,8 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.43.8.12551",
-                      "templateHash": "4682424534670987653"
+                      "version": "0.44.1.10279",
+                      "templateHash": "7375986583220396510"
                     }
                   },
                   "parameters": {
@@ -5551,12 +5647,255 @@
               "dependsOn": [
                 "kustoCluster"
               ]
+            },
+            "grantCalloutPolicyAdmin": {
+              "condition": "[not(empty(parameters('calloutPolicy')))]",
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "[__bicep.getSafeDeploymentName(format('{0}-callout-admin', parameters('kustoClusterName')))]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "clusterName": {
+                    "value": "[parameters('kustoClusterName')]"
+                  },
+                  "principalId": {
+                    "value": "[parameters('calloutPolicyUamiPrincipalId')]"
+                  },
+                  "principalType": {
+                    "value": "App"
+                  },
+                  "role": {
+                    "value": "AllDatabasesAdmin"
+                  },
+                  "tenantId": {
+                    "value": "[subscription().tenantId]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.44.1.10279",
+                      "templateHash": "7375986583220396510"
+                    }
+                  },
+                  "parameters": {
+                    "clusterName": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "The name of the Kusto Cluster"
+                      }
+                    },
+                    "principalId": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "The principal ID assigned to the cluster principal. It can be application ID or security group name"
+                      }
+                    },
+                    "principalType": {
+                      "type": "string",
+                      "allowedValues": [
+                        "App",
+                        "Group",
+                        "User"
+                      ],
+                      "metadata": {
+                        "description": "Principal type"
+                      }
+                    },
+                    "role": {
+                      "type": "string",
+                      "allowedValues": [
+                        "AllDatabasesAdmin",
+                        "AllDatabasesMonitor",
+                        "AllDatabasesViewer"
+                      ],
+                      "metadata": {
+                        "description": "Cluster principal role"
+                      }
+                    },
+                    "tenantId": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "The tenant id of the principal"
+                      }
+                    }
+                  },
+                  "variables": {
+                    "roleShortName": {
+                      "AllDatabasesAdmin": "adm",
+                      "AllDatabasesMonitor": "mon",
+                      "AllDatabasesViewer": "vwr"
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.Kusto/clusters/principalAssignments",
+                      "apiVersion": "2023-08-15",
+                      "name": "[format('{0}/{1}', parameters('clusterName'), guid(parameters('tenantId'), parameters('principalId'), variables('roleShortName')[parameters('role')]))]",
+                      "properties": {
+                        "principalId": "[parameters('principalId')]",
+                        "role": "[parameters('role')]",
+                        "principalType": "[parameters('principalType')]",
+                        "tenantId": "[parameters('tenantId')]"
+                      }
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "kustoCluster"
+              ]
+            },
+            "setKustoCalloutPolicy": {
+              "condition": "[not(empty(parameters('calloutPolicy')))]",
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "[__bicep.getSafeDeploymentName(format('set-{0}-callout-policy', parameters('kustoClusterName')))]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "location": {
+                    "value": "[parameters('location')]"
+                  },
+                  "scriptName": {
+                    "value": "[format('set-{0}-callout-policy', parameters('kustoClusterName'))]"
+                  },
+                  "scriptVersion": {
+                    "value": "2.53.0"
+                  },
+                  "scriptKind": {
+                    "value": "AzureCLI"
+                  },
+                  "scriptContent": {
+                    "value": "set -euo pipefail\r\nCLUSTER_NAME=\"$1\"\r\nCLUSTER_LOCATION=\"$2\"\r\nPOLICY_B64=\"$3\"\r\nCLUSTER_URI=\"https://${CLUSTER_NAME}.${CLUSTER_LOCATION}.kusto.windows.net\"\r\nPOLICY=$(echo \"$POLICY_B64\" | base64 -d)\r\nKQL=\".alter cluster policy callout @'${POLICY}'\"\r\nPAYLOAD=$(jq -nc --arg csl \"$KQL\" '{csl:$csl}')\r\necho \"Sleeping 30s for Kusto principal-assignment propagation...\"\r\nsleep 30\r\nTOKEN=$(az account get-access-token --resource \"$CLUSTER_URI\" --query accessToken -o tsv)\r\nfor attempt in 1 2 3 4 5; do\r\n  echo \"Attempt ${attempt}: POST .alter cluster policy callout to ${CLUSTER_URI}/v1/rest/mgmt\"\r\n  HTTP_CODE=$(curl -sS -o /tmp/kusto_resp.json -w \"%{http_code}\" -X POST \"${CLUSTER_URI}/v1/rest/mgmt\" \\\r\n    -H \"Authorization: Bearer ${TOKEN}\" \\\r\n    -H \"Content-Type: application/json\" \\\r\n    --data \"$PAYLOAD\" || true)\r\n  echo \"HTTP ${HTTP_CODE}\"\r\n  cat /tmp/kusto_resp.json || true\r\n  echo \"\"\r\n  if [ \"$HTTP_CODE\" = \"200\" ]; then\r\n    echo \"Callout policy applied successfully.\"\r\n    exit 0\r\n  fi\r\n  echo \"Attempt ${attempt} failed (HTTP ${HTTP_CODE}). Retrying in 20s...\"\r\n  sleep 20\r\ndone\r\necho \"ERROR: Failed to apply Kusto callout policy after 5 attempts.\"\r\nexit 1\r\n"
+                  },
+                  "arguments": {
+                    "value": "[format('{0} {1} {2}', parameters('kustoClusterName'), parameters('location'), base64(parameters('calloutPolicy')))]"
+                  },
+                  "userAssignedMIId": {
+                    "value": "[parameters('calloutPolicyUamiResourceId')]"
+                  },
+                  "tags": {
+                    "value": "[variables('kustoTags')]"
+                  },
+                  "timeout": {
+                    "value": "PT30M"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.44.1.10279",
+                      "templateHash": "4583673213472679312"
+                    }
+                  },
+                  "parameters": {
+                    "location": {
+                      "type": "string"
+                    },
+                    "scriptName": {
+                      "type": "string"
+                    },
+                    "scriptVersion": {
+                      "type": "string"
+                    },
+                    "scriptContent": {
+                      "type": "string"
+                    },
+                    "arguments": {
+                      "type": "string"
+                    },
+                    "userAssignedMIId": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "type": "object"
+                    },
+                    "retentionInterval": {
+                      "type": "string",
+                      "defaultValue": "PT1H"
+                    },
+                    "forceUpdate": {
+                      "type": "bool",
+                      "defaultValue": false
+                    },
+                    "utcTime": {
+                      "type": "string",
+                      "defaultValue": "[utcNow()]"
+                    },
+                    "scriptKind": {
+                      "type": "string",
+                      "defaultValue": "AzureCLI",
+                      "allowedValues": [
+                        "AzureCLI",
+                        "AzurePowerShell"
+                      ]
+                    },
+                    "timeout": {
+                      "type": "string",
+                      "defaultValue": "PT30M",
+                      "allowedValues": [
+                        "PT30M",
+                        "PT60M"
+                      ]
+                    },
+                    "cleanupPreference": {
+                      "type": "string",
+                      "defaultValue": "OnSuccess"
+                    }
+                  },
+                  "variables": {
+                    "isAzureCLI": "[equals(parameters('scriptKind'), 'AzureCLI')]",
+                    "versionProps": "[if(variables('isAzureCLI'), createObject('azCliVersion', parameters('scriptVersion')), createObject('azPowerShellVersion', parameters('scriptVersion')))]"
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.Resources/deploymentScripts",
+                      "apiVersion": "2020-10-01",
+                      "name": "[parameters('scriptName')]",
+                      "location": "[parameters('location')]",
+                      "kind": "[parameters('scriptKind')]",
+                      "identity": {
+                        "type": "UserAssigned",
+                        "userAssignedIdentities": {
+                          "[format('{0}', parameters('userAssignedMIId'))]": {}
+                        }
+                      },
+                      "properties": "[union(variables('versionProps'), createObject('scriptContent', parameters('scriptContent'), 'arguments', parameters('arguments'), 'cleanupPreference', parameters('cleanupPreference'), 'retentionInterval', parameters('retentionInterval'), 'forceUpdateTag', parameters('utcTime'), 'timeout', parameters('timeout')))]",
+                      "tags": "[parameters('tags')]"
+                    }
+                  ],
+                  "outputs": {
+                    "scriptOutput": {
+                      "type": "object",
+                      "value": "[coalesce(tryGet(reference(resourceId('Microsoft.Resources/deploymentScripts', parameters('scriptName')), '2020-10-01'), 'outputs'), createObject())]"
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "grantCalloutPolicyAdmin"
+              ]
             }
           }
         }
       },
       "dependsOn": [
-        "synapseWS"
+        "synapseWS",
+        "userAssignedMI"
       ]
     },
     "kustoPipelineDeploymentScript": {
@@ -5610,8 +5949,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.43.8.12551",
-              "templateHash": "9879112902476063819"
+              "version": "0.44.1.10279",
+              "templateHash": "4583673213472679312"
             }
           },
           "parameters": {

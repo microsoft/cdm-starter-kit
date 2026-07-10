@@ -356,6 +356,14 @@
                                         {
                                             "label": "CDM_BillingProfiles",
                                             "value": "CDM_BillingProfiles"
+                                        },
+                                        {
+                                            "label": "CDM_Departments",
+                                            "value": "CDM_Departments"
+                                        },
+                                        {
+                                            "label": "CDM_EnrollmentAccounts",
+                                            "value": "CDM_EnrollmentAccounts"
                                         }
                                     ],
                                     "required": true
