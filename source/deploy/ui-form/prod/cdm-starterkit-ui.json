@@ -341,7 +341,9 @@
                                 "defaultValue": [
                                     "CDM_InvoiceSections",
                                     "CDM_BillingAccounts",
-                                    "CDM_BillingProfiles"
+                                    "CDM_BillingProfiles",
+                                    "CDM_Departments",
+                                    "CDM_EnrollmentAccounts"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
