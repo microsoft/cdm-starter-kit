@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "10479065747529072085"
+      "templateHash": "18005487167815920343"
     }
   },
   "functions": [
@@ -131,6 +131,7 @@
       "type": "object",
       "defaultValue": {
         "datasets_Charges": [
+          "CDM_Charges_Monthly",
           "CDM_Charges_Daily"
         ],
         "datasets_Prices": [
@@ -374,8 +375,8 @@
             "    For now it is hardcoded. It needs to be changed\n",
             "*/\n",
             "val CDM_PARTITIONED_DATASETS = Set(\n",
-            "    \"CDM_Charges_Daily\",\n",
             "    \"CDM_Charges_Monthly\",\n",
+            "    \"CDM_Charges_Daily\",\n",
             "    \"CDM_Benefits_Amortization\",\n",
             "    \"CDM_Benefits_BalanceContributionCharge\",\n",
             "    \"CDM_Invoices\",\n",
@@ -1758,12 +1759,12 @@
           },
           "tables": [
             {
-              "name": "CDM_Charges_Daily",
+              "name": "CDM_Charges_Monthly",
               "version": "3.0",
               "sub_path": "/v3"
             },
             {
-              "name": "CDM_Charges_Monthly",
+              "name": "CDM_Charges_Daily",
               "version": "3.0",
               "sub_path": "/v3"
             }

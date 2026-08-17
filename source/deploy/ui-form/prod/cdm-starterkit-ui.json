@@ -229,18 +229,18 @@
                                 "multiselect": true,
                                 "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Charges')]",
                                 "defaultValue": [
-                                    "CDM_Charges_Daily",
-                                    "CDM_Charges_Monthly"
+                                    "CDM_Charges_Monthly",
+                                    "CDM_Charges_Daily"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
                                         {
-                                            "label": "CDM_Charges_Daily",
-                                            "value": "CDM_Charges_Daily"
-                                        },
-                                        {
                                             "label": "CDM_Charges_Monthly",
                                             "value": "CDM_Charges_Monthly"
+                                        },
+                                        {
+                                            "label": "CDM_Charges_Daily",
+                                            "value": "CDM_Charges_Daily"
                                         }
                                     ],
                                     "required": true
