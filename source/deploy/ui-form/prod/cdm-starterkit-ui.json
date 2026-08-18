@@ -171,9 +171,10 @@
                                     "Prices",
                                     "Benefits",
                                     "Products",
-                                    "Cloud Dimensions",
+                                    "CloudDimensions",
                                     "Accounts",
-                                    "Subscriptions"
+                                    "Subscriptions",
+                                    "Invoices"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
@@ -204,6 +205,10 @@
                                         {
                                             "label": "Subscriptions",
                                             "value": "Subscriptions"
+                                        },
+                                        {
+                                            "label": "Invoices",
+                                            "value": "Invoices"
                                         }
                                     ],
                                     "required": true
@@ -224,10 +229,15 @@
                                 "multiselect": true,
                                 "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Charges')]",
                                 "defaultValue": [
+                                    "CDM_Charges_Monthly",
                                     "CDM_Charges_Daily"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
+                                        {
+                                            "label": "CDM_Charges_Monthly",
+                                            "value": "CDM_Charges_Monthly"
+                                        },
                                         {
                                             "label": "CDM_Charges_Daily",
                                             "value": "CDM_Charges_Daily"
@@ -343,7 +353,8 @@
                                     "CDM_BillingAccounts",
                                     "CDM_BillingProfiles",
                                     "CDM_Departments",
-                                    "CDM_EnrollmentAccounts"
+                                    "CDM_EnrollmentAccounts",
+                                    "CDM_CommerceGroups"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
@@ -366,6 +377,10 @@
                                         {
                                             "label": "CDM_EnrollmentAccounts",
                                             "value": "CDM_EnrollmentAccounts"
+                                        },
+                                        {
+                                            "label": "CDM_CommerceGroups",
+                                            "value": "CDM_CommerceGroups"
                                         }
                                     ],
                                     "required": true
@@ -391,6 +406,31 @@
                                         {
                                             "label": "CDM_Subscriptions",
                                             "value": "CDM_Subscriptions"
+                                        }
+                                    ],
+                                    "required": true
+                                }
+                            },
+                            {
+                                "name": "datasets_Invoices",
+                                "type": "Microsoft.Common.DropDown",
+                                "label": "Invoices Datasets",
+                                "toolTip": "Invoices provides invoice and invoice line-item data for billing statement analysis, reconciliation, and downstream financial reporting.",
+                                "multiselect": true,
+                                "visible": "[contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Invoices')]",
+                                "defaultValue": [
+                                    "CDM_Invoices",
+                                    "CDM_InvoiceLineItems"
+                                ],
+                                "constraints": {
+                                    "allowedValues": [
+                                        {
+                                            "label": "CDM_Invoices",
+                                            "value": "CDM_Invoices"
+                                        },
+                                        {
+                                            "label": "CDM_InvoiceLineItems",
+                                            "value": "CDM_InvoiceLineItems"
                                         }
                                     ],
                                     "required": true
@@ -610,7 +650,8 @@
                 "datasets_Benefits": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Benefits'), steps('dataProductsOptions').datasetSelectionSection.datasets_Benefits, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
                 "datasets_CloudDimensions": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'CloudDimensions'), steps('dataProductsOptions').datasetSelectionSection.datasets_CloudDimensions, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
                 "datasets_Accounts": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Accounts'), steps('dataProductsOptions').datasetSelectionSection.datasets_Accounts, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
-                "datasets_Subscriptions": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Subscriptions'), steps('dataProductsOptions').datasetSelectionSection.datasets_Subscriptions, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]"
+                "datasets_Subscriptions": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Subscriptions'), steps('dataProductsOptions').datasetSelectionSection.datasets_Subscriptions, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]",
+                "datasets_Invoices": "[if(contains(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 'Invoices'), steps('dataProductsOptions').datasetSelectionSection.datasets_Invoices, take(steps('dataProductsOptions').dataProductsSection.dataProductsArray, 0))]"
             },
             "enableKustoCluster": "[steps('computeConfigurations').enableKustoCluster]",
             "kustoClusterSku": "[if(steps('computeConfigurations').kustoConfigurations.kustoSkuNotInList, steps('computeConfigurations').kustoConfigurations.kustoClusterSkuManual, steps('computeConfigurations').kustoConfigurations.kustoClusterSku)]",
