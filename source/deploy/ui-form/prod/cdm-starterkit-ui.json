@@ -277,7 +277,8 @@
                                     "CDM_Benefits_Amortization",
                                     "CDM_Benefits_BalanceSummary",
                                     "CDM_Benefits_BalanceContributionCharge",
-                                    "CDM_Benefits_BalanceContingency"
+                                    "CDM_Benefits_BalanceContingency",
+                                    "CDM_Benefits_Info"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
@@ -296,6 +297,10 @@
                                         {
                                             "label": "CDM_Benefits_BalanceContingency",
                                             "value": "CDM_Benefits_BalanceContingency"
+                                        },
+                                        {
+                                            "label": "CDM_Benefits_Info",
+                                            "value": "CDM_Benefits_Info"
                                         }
                                     ],
                                     "required": true
@@ -354,7 +359,8 @@
                                     "CDM_BillingProfiles",
                                     "CDM_Departments",
                                     "CDM_EnrollmentAccounts",
-                                    "CDM_CommerceGroups"
+                                    "CDM_CommerceGroups",
+                                    "CDM_Customers"
                                 ],
                                 "constraints": {
                                     "allowedValues": [
@@ -381,6 +387,10 @@
                                         {
                                             "label": "CDM_CommerceGroups",
                                             "value": "CDM_CommerceGroups"
+                                        },
+                                        {
+                                            "label": "CDM_Customers",
+                                            "value": "CDM_Customers"
                                         }
                                     ],
                                     "required": true
