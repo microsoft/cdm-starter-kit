@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.47.16.16243",
-      "templateHash": "10269307341453337815"
+      "templateHash": "3961665682207475559"
     }
   },
   "parameters": {
@@ -256,7 +256,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.47.16.16243",
-              "templateHash": "8969680986522095066"
+              "templateHash": "17792388023628563749"
             }
           },
           "functions": [
@@ -1539,7 +1539,7 @@
                           "type": "SynapseNotebook",
                           "dependsOn": [],
                           "policy": {
-                            "timeout": "0.12:00:00",
+                            "timeout": "0.23:00:00",
                             "retry": 1,
                             "retryIntervalInSeconds": 60,
                             "secureOutput": false,
@@ -1613,11 +1613,11 @@
                             "executorSize": "Small",
                             "conf": {
                               "spark.dynamicAllocation.enabled": false,
-                              "spark.dynamicAllocation.minExecutors": 200,
-                              "spark.dynamicAllocation.maxExecutors": 200
+                              "spark.dynamicAllocation.minExecutors": 240,
+                              "spark.dynamicAllocation.maxExecutors": 240
                             },
                             "driverSize": "Small",
-                            "numExecutors": 200,
+                            "numExecutors": 240,
                             "authentication": {
                               "type": "MSI"
                             }
@@ -1672,8 +1672,8 @@
                 "type": "ScheduleTrigger",
                 "typeProperties": {
                   "recurrence": {
-                    "frequency": "Hour",
-                    "interval": 12,
+                    "frequency": "Day",
+                    "interval": 1,
                     "startTime": "2026-02-14T00:00:00Z",
                     "timeZone": "UTC"
                   }
